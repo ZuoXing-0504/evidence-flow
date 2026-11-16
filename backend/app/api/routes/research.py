@@ -21,6 +21,7 @@ from app.research.repository import ResearchRepository
 from app.research.schemas import (
     CreateResearchRequest,
     EvidenceResponse,
+    FindingResponse,
     ReportResponse,
     ResearchTaskListResponse,
     ResearchTaskResponse,
@@ -163,6 +164,13 @@ async def get_evidence(task_id: UUID, session: Session, user: CurrentUser) -> li
     repository = ResearchRepository(session)
     task = await _owned_task(repository, task_id, user.id)
     return list(await repository.get_evidence(task.id))
+
+
+@router.get("/{task_id}/findings", response_model=list[FindingResponse])
+async def get_findings(task_id: UUID, session: Session, user: CurrentUser) -> list[object]:
+    repository = ResearchRepository(session)
+    task = await _owned_task(repository, task_id, user.id)
+    return list(await repository.get_findings(task.id))
 
 
 def _encode_sse(record: ResearchEventRecord) -> str:

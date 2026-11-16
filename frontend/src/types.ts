@@ -71,6 +71,14 @@ export interface Report {
   updated_at: string
 }
 
+export interface Finding {
+  id: string
+  claim: string
+  supporting_evidence_ids: string[]
+  opposing_evidence_ids: string[]
+  confidence: number
+}
+
 export interface ResearchEvent {
   id: number
   task_id: string

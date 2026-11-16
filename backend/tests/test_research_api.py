@@ -102,6 +102,13 @@ async def test_research_api_runs_and_replays_events(tmp_path: Path) -> None:
             assert len(evidence.json()) == 3
             assert evidence.json()[0]["citation_id"] == "E1"
 
+            findings = await client.get(f"/api/research/{task_id}/findings", headers=headers)
+            assert findings.status_code == 200
+            assert len(findings.json()) == 3
+            assert findings.json()[0]["confidence"] == pytest.approx(0.725)
+            evidence_ids = {item["domain_id"] for item in evidence.json()}
+            assert set(findings.json()[0]["supporting_evidence_ids"]) <= evidence_ids
+
             report = await client.get(f"/api/research/{task_id}/report", headers=headers)
             assert report.status_code == 200
             assert "[E1]" in report.json()["content"]
@@ -229,6 +236,9 @@ async def test_research_tasks_are_isolated_between_users(tmp_path: Path) -> None
             ).status_code == 404
             assert (
                 await client.get(f"/api/research/{task_id}/evidence", headers=other)
+            ).status_code == 404
+            assert (
+                await client.get(f"/api/research/{task_id}/findings", headers=other)
             ).status_code == 404
             assert (
                 await client.get(f"/api/research/{task_id}/events", headers=other)

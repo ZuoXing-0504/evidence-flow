@@ -57,3 +57,13 @@ class ReportResponse(BaseModel):
     citation_errors: list[str]
     created_at: datetime
     updated_at: datetime
+
+
+class FindingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    claim: str
+    supporting_evidence_ids: list[UUID]
+    opposing_evidence_ids: list[UUID]
+    confidence: float

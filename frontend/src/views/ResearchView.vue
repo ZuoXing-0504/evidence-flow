@@ -8,18 +8,20 @@ import CreateResearchDialog from "@/components/CreateResearchDialog.vue"
 import DeleteResearchDialog from "@/components/DeleteResearchDialog.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import EvidencePanel from "@/components/EvidencePanel.vue"
+import FindingsView from "@/components/FindingsView.vue"
 import ReportView from "@/components/ReportView.vue"
 import ResearchTimeline from "@/components/ResearchTimeline.vue"
 import StatusPill from "@/components/StatusPill.vue"
 import TaskList from "@/components/TaskList.vue"
 import { formatApiDate } from "@/dates"
 import { isTerminalResearchStatus } from "@/status"
-import type { Evidence, Report, ResearchEvent, ResearchTask } from "@/types"
+import type { Evidence, Finding, Report, ResearchEvent, ResearchTask } from "@/types"
 
 const tasks = ref<ResearchTask[]>([])
 const selected = ref<ResearchTask | null>(null)
 const report = ref<Report | null>(null)
 const evidence = ref<Evidence[]>([])
+const findings = ref<Finding[]>([])
 const events = ref<ResearchEvent[]>([])
 const loadingTasks = ref(true)
 const loadingDetail = ref(false)
@@ -31,7 +33,8 @@ const deleteError = ref("")
 const dialogOpen = ref(false)
 const error = ref("")
 const createError = ref("")
-const mobileTab = ref<"progress" | "report" | "evidence">("progress")
+const mobileTab = ref<"progress" | "report" | "findings" | "evidence">("progress")
+const resultMode = ref<"report" | "findings">("report")
 let streamController: AbortController | null = null
 
 const terminal = computed(() =>
@@ -67,12 +70,15 @@ async function loadTasks(selectFirst = true): Promise<void> {
 
 async function loadCompletedAssets(task: ResearchTask): Promise<void> {
   if (!["completed", "completed_with_warnings"].includes(task.status)) return
-  const [nextReport, nextEvidence] = await Promise.all([
+  const [nextReport, nextEvidence, nextFindings] = await Promise.all([
     researchApi.report(task.id),
     researchApi.evidence(task.id),
+    researchApi.findings(task.id),
   ])
   report.value = nextReport
   evidence.value = nextEvidence
+  findings.value = nextFindings
+  resultMode.value = "report"
   mobileTab.value = "report"
 }
 
@@ -112,7 +118,9 @@ async function selectTask(id: string): Promise<void> {
   error.value = ""
   report.value = null
   evidence.value = []
+  findings.value = []
   events.value = []
+  resultMode.value = "report"
   mobileTab.value = "progress"
   try {
     selected.value = await researchApi.get(id)
@@ -166,6 +174,7 @@ async function deleteTask(): Promise<void> {
     selected.value = null
     report.value = null
     evidence.value = []
+    findings.value = []
     events.value = []
     deleteDialogOpen.value = false
     if (tasks.value[0]) await selectTask(tasks.value[0].id)
@@ -247,7 +256,8 @@ onBeforeUnmount(() => streamController?.abort())
 
           <div class="mobile-segments">
             <button :class="{ active: mobileTab === 'progress' }" @click="mobileTab = 'progress'">进度</button>
-            <button :class="{ active: mobileTab === 'report' }" @click="mobileTab = 'report'">报告</button>
+            <button :class="{ active: mobileTab === 'report' }" @click="mobileTab = 'report'; resultMode = 'report'">报告</button>
+            <button :class="{ active: mobileTab === 'findings' }" @click="mobileTab = 'findings'; resultMode = 'findings'">分析</button>
             <button :class="{ active: mobileTab === 'evidence' }" @click="mobileTab = 'evidence'">证据</button>
           </div>
 
@@ -264,11 +274,20 @@ onBeforeUnmount(() => streamController?.abort())
             </section>
 
             <section class="report-column">
+              <div v-if="report" class="result-segments" aria-label="研究结果视图">
+                <button :class="{ active: resultMode === 'report' }" type="button" @click="resultMode = 'report'">研究报告</button>
+                <button :class="{ active: resultMode === 'findings' }" type="button" @click="resultMode = 'findings'">分析结论</button>
+              </div>
               <ReportView
-                v-if="report"
+                v-if="report && resultMode === 'report'"
                 :topic="selected.topic"
                 :content="report.content"
                 :citation-errors="report.citation_errors"
+              />
+              <FindingsView
+                v-else-if="report && resultMode === 'findings'"
+                :findings="findings"
+                :evidence="evidence"
               />
               <EmptyState
                 v-else

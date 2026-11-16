@@ -166,6 +166,14 @@ class ResearchRepository:
         )
         return list(result)
 
+    async def get_findings(self, task_id: UUID) -> list[FindingRecord]:
+        result = await self.session.scalars(
+            select(FindingRecord)
+            .where(FindingRecord.task_id == task_id)
+            .order_by(FindingRecord.confidence.desc(), FindingRecord.id)
+        )
+        return list(result)
+
     @staticmethod
     def _evidence_record(task_id: UUID, item: Evidence) -> EvidenceRecord:
         return EvidenceRecord(

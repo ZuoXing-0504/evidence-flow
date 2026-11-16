@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   DocumentRecord,
   Evidence,
+  Finding,
   Report,
   ResearchEvent,
   ResearchTask,
@@ -102,6 +103,7 @@ export const researchApi = {
     request<void>(`/api/research/${id}`, { method: "DELETE" }),
   report: (id: string) => request<Report>(`/api/research/${id}/report`),
   evidence: (id: string) => request<Evidence[]>(`/api/research/${id}/evidence`),
+  findings: (id: string) => request<Finding[]>(`/api/research/${id}/findings`),
 }
 
 export const documentsApi = {
