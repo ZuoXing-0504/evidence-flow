@@ -12,6 +12,22 @@ from app.research import (
 )
 
 
+class FailingRetriever:
+    async def search(self, topic: str, queries: list[str]) -> list[Evidence]:
+        del topic, queries
+        raise ConnectionError("Vector store unavailable")
+
+
+class FailingMemory:
+    async def recall(self, **kwargs: object) -> list[Evidence]:
+        del kwargs
+        raise ConnectionError("Memory unavailable")
+
+    async def remember(self, state: object) -> None:
+        del state
+        raise ConnectionError("Memory unavailable")
+
+
 @pytest.mark.asyncio
 async def test_offline_workflow_completes_with_valid_citations() -> None:
     graph = build_research_graph(MockPlanner(), MockWebRetriever(), StaticRetriever())
@@ -78,3 +94,20 @@ async def test_invalid_topic_fails_before_planning() -> None:
 
     assert result["status"] == ResearchStatus.FAILED
     assert result["errors"] == ["Research topic must contain at least 3 characters"]
+
+
+@pytest.mark.asyncio
+async def test_local_retrieval_and_memory_failures_degrade_to_warnings() -> None:
+    graph = build_research_graph(
+        MockPlanner(),
+        MockWebRetriever(),
+        FailingRetriever(),
+        memory=FailingMemory(),
+    )
+
+    result = await graph.ainvoke(create_initial_state("AI agent market"))
+
+    assert result["status"] == ResearchStatus.COMPLETED
+    assert "Local knowledge retrieval is unavailable" in result["warnings"]
+    assert "Semantic memory recall is unavailable" in result["warnings"]
+    assert "Semantic memory commit is unavailable" in result["warnings"]

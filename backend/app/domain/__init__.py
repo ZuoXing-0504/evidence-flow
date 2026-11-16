@@ -1,4 +1,5 @@
 from app.domain.models import (
+    DocumentStatus,
     Evidence,
     EvidenceDecision,
     EvidenceSource,
@@ -12,6 +13,7 @@ from app.domain.models import (
 )
 
 __all__ = [
+    "DocumentStatus",
     "Evidence",
     "EvidenceDecision",
     "EvidenceSource",

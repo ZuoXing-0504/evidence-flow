@@ -1,7 +1,8 @@
 from collections.abc import Awaitable, Callable
 from typing import Protocol
+from uuid import UUID
 
-from app.domain import Evidence, Finding, ResearchEvent, ResearchPlan
+from app.domain import Evidence, Finding, ResearchEvent, ResearchPlan, ResearchState
 
 EventSink = Callable[[ResearchEvent], Awaitable[None]]
 
@@ -26,3 +27,9 @@ class ReportWriter(Protocol):
         findings: list[Finding],
         evidence: list[Evidence],
     ) -> str: ...
+
+
+class ResearchMemory(Protocol):
+    async def recall(self, *, user_id: UUID, topic: str, limit: int = 3) -> list[Evidence]: ...
+
+    async def remember(self, state: ResearchState) -> None: ...

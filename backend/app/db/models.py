@@ -19,7 +19,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from app.domain import EvidenceDecision, EvidenceSource, ResearchEventType, ResearchStatus
+from app.domain import (
+    DocumentStatus,
+    EvidenceDecision,
+    EvidenceSource,
+    ResearchEventType,
+    ResearchStatus,
+)
 
 
 def utc_now() -> datetime:
@@ -42,6 +48,30 @@ class UserRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     tasks: Mapped[list[ResearchTaskRecord]] = relationship(back_populates="user")
+    documents: Mapped[list[DocumentRecord]] = relationship(back_populates="user")
+
+
+class DocumentRecord(Base):
+    __tablename__ = "documents"
+    __table_args__ = (
+        UniqueConstraint("user_id", "content_hash", name="uq_documents_user_content_hash"),
+        Index("ix_documents_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(500))
+    source_uri: Mapped[str | None] = mapped_column(String(2048))
+    content_hash: Mapped[str] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(20), default=DocumentStatus.INDEXING.value)
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    user: Mapped[UserRecord] = relationship(back_populates="documents")
 
 
 class ResearchTaskRecord(Base):

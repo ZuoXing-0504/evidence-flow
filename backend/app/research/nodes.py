@@ -11,7 +11,13 @@ from app.domain import (
     ResearchStatus,
 )
 from app.research.citations import validate_citations
-from app.research.contracts import EvidenceRetriever, ReportWriter, ResearchAnalyst, ResearchPlanner
+from app.research.contracts import (
+    EvidenceRetriever,
+    ReportWriter,
+    ResearchAnalyst,
+    ResearchMemory,
+    ResearchPlanner,
+)
 
 
 def _tokenize(value: str) -> set[str]:
@@ -28,6 +34,7 @@ class ResearchNodes:
         minimum_evidence: int = 3,
         analyst: ResearchAnalyst | None = None,
         writer: ReportWriter | None = None,
+        memory: ResearchMemory | None = None,
     ) -> None:
         self.planner = planner
         self.web_retriever = web_retriever
@@ -35,10 +42,18 @@ class ResearchNodes:
         self.minimum_evidence = minimum_evidence
         self.research_analyst = analyst
         self.report_writer = writer
+        self.memory = memory
 
     async def memory_recall(self, state: ResearchState) -> dict[str, Any]:
-        del state
-        return {}
+        if self.memory is None:
+            return {}
+        try:
+            evidence = await self.memory.recall(
+                user_id=state["user_id"], topic=state["topic"], limit=3
+            )
+        except Exception:
+            return {"warnings": ["Semantic memory recall is unavailable"]}
+        return {"candidate_evidence": evidence}
 
     async def intent_router(self, state: ResearchState) -> dict[str, Any]:
         topic = " ".join(state["topic"].split())
@@ -63,7 +78,13 @@ class ResearchNodes:
         return {"candidate_evidence": evidence}
 
     async def local_scout(self, state: ResearchState) -> dict[str, Any]:
-        evidence = await self.local_retriever.search(state["topic"], state["search_queries"])
+        try:
+            evidence = await self.local_retriever.search(state["topic"], state["search_queries"])
+        except Exception:
+            return {
+                "candidate_evidence": [],
+                "warnings": ["Local knowledge retrieval is unavailable"],
+            }
         return {"candidate_evidence": evidence}
 
     async def evidence_judge(self, state: ResearchState) -> dict[str, Any]:
@@ -81,8 +102,14 @@ class ResearchNodes:
 
             content_tokens = _tokenize(f"{item.title} {item.content}")
             overlap = len(topic_tokens & content_tokens)
-            item.relevance_score = min(1.0, 0.55 + overlap * 0.1)
-            item.credibility_score = 0.6 if item.url else 0.7
+            lexical_score = min(1.0, 0.55 + overlap * 0.1)
+            item.relevance_score = (
+                lexical_score
+                if item.relevance_score is None
+                else min(1.0, item.relevance_score * 0.7 + lexical_score * 0.3)
+            )
+            if item.credibility_score is None:
+                item.credibility_score = 0.6 if item.url else 0.7
             item.decision = EvidenceDecision.ACCEPTED
             item.citation_id = f"E{len(accepted) + 1}"
             accepted.append(item)
@@ -165,7 +192,12 @@ class ResearchNodes:
         }
 
     async def memory_commit(self, state: ResearchState) -> dict[str, Any]:
-        del state
+        if self.memory is None:
+            return {}
+        try:
+            await self.memory.remember(state)
+        except Exception:
+            return {"warnings": ["Semantic memory commit is unavailable"]}
         return {}
 
 

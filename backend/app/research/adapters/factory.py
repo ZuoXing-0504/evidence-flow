@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 import httpx
 
 from app.core.config import Settings
+from app.knowledge.retrieval import KnowledgeRetriever
+from app.knowledge.store import KnowledgeStore
 from app.research.adapters.bocha import BochaWebRetriever
 from app.research.adapters.dashscope import DashScopeResearchModel
 from app.research.contracts import (
     EvidenceRetriever,
     ReportWriter,
     ResearchAnalyst,
+    ResearchMemory,
     ResearchPlanner,
 )
 from app.research.mock import MockPlanner, MockWebRetriever, StaticRetriever
@@ -23,9 +27,16 @@ class ResearchRuntime:
     local_retriever: EvidenceRetriever
     analyst: ResearchAnalyst | None = None
     writer: ReportWriter | None = None
+    memory: ResearchMemory | None = None
 
 
-def build_research_runtime(settings: Settings, client: httpx.AsyncClient) -> ResearchRuntime:
+def build_research_runtime(
+    settings: Settings,
+    client: httpx.AsyncClient,
+    *,
+    user_id: UUID | None = None,
+    knowledge_store: KnowledgeStore | None = None,
+) -> ResearchRuntime:
     if settings.llm_provider == "dashscope":
         model = DashScopeResearchModel(
             client,
@@ -51,10 +62,20 @@ def build_research_runtime(settings: Settings, client: httpx.AsyncClient) -> Res
     else:
         web_retriever = MockWebRetriever()
 
+    local_retriever: EvidenceRetriever
+    memory: ResearchMemory | None
+    if user_id is not None and knowledge_store is not None:
+        local_retriever = KnowledgeRetriever(knowledge_store, user_id)
+        memory = knowledge_store
+    else:
+        local_retriever = StaticRetriever()
+        memory = None
+
     return ResearchRuntime(
         planner=planner,
         web_retriever=web_retriever,
-        local_retriever=StaticRetriever(),
+        local_retriever=local_retriever,
         analyst=analyst,
         writer=writer,
+        memory=memory,
     )

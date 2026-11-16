@@ -18,6 +18,12 @@ class ResearchStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class DocumentStatus(StrEnum):
+    INDEXING = "indexing"
+    INDEXED = "indexed"
+    FAILED = "failed"
+
+
 class ResearchNode(StrEnum):
     MEMORY_RECALL = "memory_recall"
     INTENT_ROUTER = "intent_router"

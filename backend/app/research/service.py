@@ -9,6 +9,7 @@ import httpx
 from app.core.config import get_settings
 from app.db import Database, get_database
 from app.domain import ResearchEvent, ResearchEventType, ResearchState, ResearchStatus
+from app.knowledge import get_knowledge_store
 from app.research.adapters import build_research_runtime
 from app.research.repository import ResearchRepository
 from app.research.workflow import build_research_graph, create_initial_state
@@ -57,7 +58,13 @@ async def execute_research_task(task_id: UUID, database: Database | None = None)
     try:
         settings = get_settings()
         async with httpx.AsyncClient(timeout=settings.provider_timeout_seconds) as client:
-            runtime = build_research_runtime(settings, client)
+            knowledge_store = get_knowledge_store()
+            runtime = build_research_runtime(
+                settings,
+                client,
+                user_id=user_id,
+                knowledge_store=knowledge_store,
+            )
             graph = build_research_graph(
                 runtime.planner,
                 runtime.web_retriever,
@@ -65,6 +72,7 @@ async def execute_research_task(task_id: UUID, database: Database | None = None)
                 event_sink=DatabaseEventSink(database),
                 analyst=runtime.analyst,
                 writer=runtime.writer,
+                memory=runtime.memory,
             )
             result = cast(ResearchState, await graph.ainvoke(initial_state))
         async with database.sessions() as session:

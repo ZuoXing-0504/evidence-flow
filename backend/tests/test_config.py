@@ -9,6 +9,8 @@ def test_default_settings_use_offline_search() -> None:
 
     assert settings.web_search_provider == "mock"
     assert settings.llm_provider == "mock"
+    assert settings.embedding_provider == "mock"
+    assert settings.vector_store_provider == "memory"
     assert settings.max_research_iterations == 2
 
 
@@ -29,6 +31,18 @@ def test_dashscope_provider_requires_key() -> None:
 
     with pytest.raises(ValueError, match="DASHSCOPE_API_KEY"):
         settings.validate_runtime()
+
+
+def test_dashscope_embeddings_require_key() -> None:
+    settings = Settings(embedding_provider="dashscope", dashscope_api_key="", _env_file=None)
+
+    with pytest.raises(ValueError, match="EMBEDDING_PROVIDER"):
+        settings.validate_runtime()
+
+
+def test_milvus_collection_prefix_is_validated() -> None:
+    with pytest.raises(ValidationError, match="MILVUS_COLLECTION_PREFIX"):
+        Settings(milvus_collection_prefix="invalid-prefix", _env_file=None)
 
 
 def test_production_requires_strong_secret() -> None:

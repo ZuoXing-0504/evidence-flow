@@ -13,6 +13,7 @@ from app.research.contracts import (
     EvidenceRetriever,
     ReportWriter,
     ResearchAnalyst,
+    ResearchMemory,
     ResearchPlanner,
 )
 from app.research.nodes import (
@@ -80,6 +81,7 @@ def build_research_graph(
     event_sink: EventSink | None = None,
     analyst: ResearchAnalyst | None = None,
     writer: ReportWriter | None = None,
+    memory: ResearchMemory | None = None,
 ) -> ResearchGraph:
     nodes = ResearchNodes(
         planner,
@@ -88,6 +90,7 @@ def build_research_graph(
         minimum_evidence=minimum_evidence,
         analyst=analyst,
         writer=writer,
+        memory=memory,
     )
     graph = StateGraph(ResearchState)
 

@@ -21,6 +21,7 @@ The project turns a research topic into a traceable report through planning, par
 - ownership checks across tasks, reports, evidence, cancellation, and event streams;
 - selectable Bocha web search and DashScope/Qwen planning, analysis, and report writing;
 - bounded provider retries, structured LLM output validation, and strict evidence ID mapping;
+- user-scoped document ingestion, chunking, Milvus retrieval, and semantic research memory;
 - unit and integration tests for contracts and the complete graph.
 
 No real API key belongs in this repository. Copy `.env.example` to `.env` and provide secrets locally.
@@ -55,6 +56,11 @@ The default `mock` providers run without paid credentials. To enable the real re
 set `LLM_PROVIDER=dashscope`, `WEB_SEARCH_PROVIDER=bocha`, `DASHSCOPE_API_KEY`, and
 `BOCHA_API_KEY` in the local `.env` file. Secrets must never be committed.
 
+`POST /api/documents` accepts a title, text content, and optional source URI. Docker deployments
+use Milvus as the shared vector store; deterministic embeddings keep this path usable without an
+embedding API. Set `EMBEDDING_PROVIDER=dashscope` to use `text-embedding-v3`. The in-memory vector
+store is intended only for tests or a single-process development session.
+
 ## Research flow
 
 ```text
@@ -65,8 +71,8 @@ Memory Recall -> Intent Router -> Planner
 ```
 
 The workflow retains deterministic mock adapters so it can be demonstrated and tested without
-paid credentials. Milvus retrieval and the Vue workbench are introduced in subsequent milestones
-behind the same contracts.
+paid credentials. The Vue research workbench is introduced in a subsequent milestone behind the
+same API contracts.
 
 ## Repository layout
 

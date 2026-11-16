@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from typing import Literal
 
@@ -29,6 +30,7 @@ class Settings(BaseSettings):
     milvus_host: str = "localhost"
     milvus_port: int = 19530
     milvus_collection_prefix: str = "evidence_flow"
+    vector_store_provider: Literal["memory", "milvus"] = "memory"
 
     dashscope_api_key: SecretStr = SecretStr("")
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -37,6 +39,7 @@ class Settings(BaseSettings):
     llm_fast_model: str = "qwen-turbo"
     embedding_model: str = "text-embedding-v3"
     embedding_dimension: int = 1024
+    embedding_provider: Literal["dashscope", "mock"] = "mock"
 
     bocha_api_key: SecretStr = SecretStr("")
     bocha_base_url: str = "https://api.bochaai.com/v1"
@@ -52,6 +55,13 @@ class Settings(BaseSettings):
             raise ValueError("Wildcard CORS origins are not allowed")
         return value
 
+    @field_validator("milvus_collection_prefix")
+    @classmethod
+    def validate_collection_prefix(cls, value: str) -> str:
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value) is None:
+            raise ValueError("MILVUS_COLLECTION_PREFIX must be a valid identifier prefix")
+        return value
+
     @field_validator("app_secret_key")
     @classmethod
     def require_production_secret(cls, value: SecretStr, info: object) -> SecretStr:
@@ -65,6 +75,8 @@ class Settings(BaseSettings):
             raise ValueError("BOCHA_API_KEY is required when WEB_SEARCH_PROVIDER=bocha")
         if self.llm_provider == "dashscope" and not self.dashscope_api_key.get_secret_value():
             raise ValueError("DASHSCOPE_API_KEY is required when LLM_PROVIDER=dashscope")
+        if self.embedding_provider == "dashscope" and not self.dashscope_api_key.get_secret_value():
+            raise ValueError("DASHSCOPE_API_KEY is required when EMBEDDING_PROVIDER=dashscope")
 
 
 @lru_cache
