@@ -117,6 +117,16 @@ services:
       redis:
         condition: service_healthy
 
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_started
+
 volumes:
   postgres_data:
   redis_data:

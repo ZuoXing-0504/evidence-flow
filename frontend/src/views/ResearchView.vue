@@ -1,0 +1,253 @@
+<script setup lang="ts">
+import { AlertTriangle, BookOpenText, FileSearch, OctagonX, RefreshCw } from "@lucide/vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
+
+import { ApiError, researchApi, streamResearchEvents } from "@/api"
+import AppShell from "@/components/AppShell.vue"
+import CreateResearchDialog from "@/components/CreateResearchDialog.vue"
+import EmptyState from "@/components/EmptyState.vue"
+import EvidencePanel from "@/components/EvidencePanel.vue"
+import ReportView from "@/components/ReportView.vue"
+import ResearchTimeline from "@/components/ResearchTimeline.vue"
+import StatusPill from "@/components/StatusPill.vue"
+import TaskList from "@/components/TaskList.vue"
+import { formatApiDate } from "@/dates"
+import type { Evidence, Report, ResearchEvent, ResearchTask } from "@/types"
+
+const tasks = ref<ResearchTask[]>([])
+const selected = ref<ResearchTask | null>(null)
+const report = ref<Report | null>(null)
+const evidence = ref<Evidence[]>([])
+const events = ref<ResearchEvent[]>([])
+const loadingTasks = ref(true)
+const loadingDetail = ref(false)
+const creating = ref(false)
+const cancelling = ref(false)
+const dialogOpen = ref(false)
+const error = ref("")
+const createError = ref("")
+const mobileTab = ref<"progress" | "report" | "evidence">("progress")
+let streamController: AbortController | null = null
+
+const terminal = computed(() =>
+  selected.value
+    ? ["completed", "completed_with_warnings", "failed", "cancelled"].includes(selected.value.status)
+    : false,
+)
+
+const canCancel = computed(() =>
+  selected.value ? ["queued", "running"].includes(selected.value.status) : false,
+)
+
+function errorMessage(value: unknown): string {
+  return value instanceof ApiError ? value.message : "The research service could not be reached"
+}
+
+async function loadTasks(selectFirst = true): Promise<void> {
+  loadingTasks.value = true
+  error.value = ""
+  try {
+    tasks.value = (await researchApi.list()).items
+    if (selectFirst && !selected.value && tasks.value[0]) await selectTask(tasks.value[0].id)
+  } catch (value) {
+    error.value = errorMessage(value)
+  } finally {
+    loadingTasks.value = false
+  }
+}
+
+async function loadCompletedAssets(task: ResearchTask): Promise<void> {
+  if (!["completed", "completed_with_warnings"].includes(task.status)) return
+  const [nextReport, nextEvidence] = await Promise.all([
+    researchApi.report(task.id),
+    researchApi.evidence(task.id),
+  ])
+  report.value = nextReport
+  evidence.value = nextEvidence
+  mobileTab.value = "report"
+}
+
+async function refreshSelected(): Promise<void> {
+  if (!selected.value) return
+  const task = await researchApi.get(selected.value.id)
+  selected.value = task
+  const index = tasks.value.findIndex((item) => item.id === task.id)
+  if (index >= 0) tasks.value[index] = task
+  await loadCompletedAssets(task)
+}
+
+async function beginStream(task: ResearchTask): Promise<void> {
+  streamController?.abort()
+  streamController = new AbortController()
+  try {
+    await streamResearchEvents(
+      task.id,
+      (event) => {
+        if (events.value.some((item) => item.id === event.id)) return
+        events.value.push(event)
+      },
+      streamController.signal,
+    )
+    await refreshSelected()
+  } catch (value) {
+    if (!(value instanceof DOMException && value.name === "AbortError")) {
+      error.value = errorMessage(value)
+    }
+  }
+}
+
+async function selectTask(id: string): Promise<void> {
+  if (selected.value?.id === id && !loadingDetail.value) return
+  streamController?.abort()
+  loadingDetail.value = true
+  error.value = ""
+  report.value = null
+  evidence.value = []
+  events.value = []
+  mobileTab.value = "progress"
+  try {
+    selected.value = await researchApi.get(id)
+    await nextTick()
+    void beginStream(selected.value)
+  } catch (value) {
+    error.value = errorMessage(value)
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+async function createResearch(topic: string, maxIterations: number): Promise<void> {
+  creating.value = true
+  createError.value = ""
+  try {
+    const task = await researchApi.create(topic, maxIterations)
+    tasks.value.unshift(task)
+    dialogOpen.value = false
+    selected.value = null
+    await selectTask(task.id)
+  } catch (value) {
+    createError.value = errorMessage(value)
+  } finally {
+    creating.value = false
+  }
+}
+
+async function cancelTask(): Promise<void> {
+  if (!selected.value || !canCancel.value) return
+  cancelling.value = true
+  try {
+    selected.value = await researchApi.cancel(selected.value.id)
+    await refreshSelected()
+  } catch (value) {
+    error.value = errorMessage(value)
+  } finally {
+    cancelling.value = false
+  }
+}
+
+onMounted(() => void loadTasks())
+onBeforeUnmount(() => streamController?.abort())
+</script>
+
+<template>
+  <AppShell>
+    <div class="research-workspace">
+      <TaskList
+        :tasks="tasks"
+        :selected-id="selected?.id ?? null"
+        :loading="loadingTasks"
+        @select="selectTask"
+        @create="dialogOpen = true"
+      />
+
+      <section class="research-main">
+        <div v-if="error" class="error-banner">
+          <AlertTriangle :size="17" />
+          <span>{{ error }}</span>
+          <button class="icon-button subtle" type="button" title="Retry" @click="loadTasks(false)">
+            <RefreshCw :size="16" />
+          </button>
+        </div>
+
+        <EmptyState
+          v-if="!selected && !loadingTasks"
+          :icon="FileSearch"
+          title="No research selected"
+          detail="Start a research task to build an evidence-backed report."
+        >
+          <button class="text-button primary" type="button" @click="dialogOpen = true">
+            New research
+          </button>
+        </EmptyState>
+
+        <template v-else-if="selected">
+          <header class="research-header">
+            <div class="research-title-block">
+              <div class="research-title-meta">
+                <StatusPill :status="selected.status" />
+                <span>{{ formatApiDate(selected.created_at) }}</span>
+              </div>
+              <h1>{{ selected.topic }}</h1>
+              <p v-if="selected.warnings.length" class="warning-copy">
+                {{ selected.warnings.join(" · ") }}
+              </p>
+            </div>
+            <button
+              v-if="canCancel"
+              class="text-button danger"
+              type="button"
+              :disabled="cancelling"
+              @click="cancelTask"
+            >
+              <OctagonX :size="16" /> {{ cancelling ? "Cancelling" : "Cancel" }}
+            </button>
+          </header>
+
+          <div class="mobile-segments">
+            <button :class="{ active: mobileTab === 'progress' }" @click="mobileTab = 'progress'">Progress</button>
+            <button :class="{ active: mobileTab === 'report' }" @click="mobileTab = 'report'">Report</button>
+            <button :class="{ active: mobileTab === 'evidence' }" @click="mobileTab = 'evidence'">Evidence</button>
+          </div>
+
+          <div class="research-body" :class="`mobile-${mobileTab}`">
+            <section class="progress-column">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Execution</p>
+                  <h2>Agent progress</h2>
+                </div>
+                <span class="iteration-label">Round {{ selected.iteration }} / {{ selected.max_iterations }}</span>
+              </div>
+              <ResearchTimeline :events="events" :task-terminal="terminal" />
+            </section>
+
+            <section class="report-column">
+              <ReportView v-if="report" :content="report.content" />
+              <EmptyState
+                v-else
+                :icon="BookOpenText"
+                title="Report in progress"
+                :detail="terminal ? 'This task ended without a report.' : 'The writer will publish the report after evidence review.'"
+              />
+            </section>
+          </div>
+        </template>
+      </section>
+
+      <EvidencePanel
+        v-if="selected"
+        :evidence="evidence"
+        :loading="loadingDetail || (!terminal && !evidence.length)"
+        :class="{ 'mobile-evidence-active': mobileTab === 'evidence' }"
+      />
+    </div>
+
+    <CreateResearchDialog
+      :open="dialogOpen"
+      :loading="creating"
+      :error="createError"
+      @close="dialogOpen = false"
+      @submit="createResearch"
+    />
+  </AppShell>
+</template>

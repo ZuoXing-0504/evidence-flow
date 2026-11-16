@@ -22,6 +22,7 @@ The project turns a research topic into a traceable report through planning, par
 - selectable Bocha web search and DashScope/Qwen planning, analysis, and report writing;
 - bounded provider retries, structured LLM output validation, and strict evidence ID mapping;
 - user-scoped document ingestion, chunking, Milvus retrieval, and semantic research memory;
+- Vue 3 research workbench with authenticated SSE progress, reports, evidence, and knowledge management;
 - unit and integration tests for contracts and the complete graph.
 
 No real API key belongs in this repository. Copy `.env.example` to `.env` and provide secrets locally.
@@ -44,10 +45,11 @@ uv run --project backend pytest backend/tests
 
 ```bash
 docker compose up -d postgres redis etcd minio milvus
-docker compose --profile app up --build backend worker
+docker compose --profile app up --build backend worker frontend
 ```
 
-The API is available at `http://localhost:8000`; health endpoints are `/health/live` and `/health/ready`.
+The workbench is available at `http://localhost:5173` and the API at `http://localhost:8000`;
+health endpoints are `/health/live` and `/health/ready`.
 Register through `POST /api/auth/register`, then send the returned token as
 `Authorization: Bearer <token>` to the research endpoints. Interactive API documentation is
 available at `/docs`.
@@ -71,14 +73,13 @@ Memory Recall -> Intent Router -> Planner
 ```
 
 The workflow retains deterministic mock adapters so it can be demonstrated and tested without
-paid credentials. The Vue research workbench is introduced in a subsequent milestone behind the
-same API contracts.
+paid credentials.
 
 ## Repository layout
 
 ```text
 backend/       FastAPI application, domain contracts, graph, services, and tests
-frontend/      Vue 3 research workbench (introduced in a later milestone)
+frontend/      Vue 3 research workbench and Nginx runtime
 docker-compose.yml
 ```
 
