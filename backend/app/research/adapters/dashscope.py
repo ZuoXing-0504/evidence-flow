@@ -122,7 +122,8 @@ class DashScopeResearchModel:
         return await self._complete_json(
             system=(
                 "You are a research planner. Return only one JSON object matching the supplied "
-                "schema. Make queries specific, diverse, and suitable for evidence gathering."
+                "schema. Make queries specific, diverse, and suitable for evidence gathering. "
+                "Write all user-facing content in the same language as the research topic."
             ),
             prompt=prompt,
             response_type=ResearchPlan,
@@ -149,7 +150,8 @@ class DashScopeResearchModel:
         payload = await self._complete_json(
             system=(
                 "You are an evidence analyst. Use only the supplied evidence and exact citation "
-                "IDs. Return JSON only. Never invent a citation or unsupported fact."
+                "IDs. Return JSON only. Never invent a citation or unsupported fact. Write claims "
+                "in the same language as the research topic."
             ),
             prompt=prompt,
             response_type=AnalysisPayload,
@@ -217,7 +219,8 @@ class DashScopeResearchModel:
             system=(
                 "Write a rigorous Markdown research report using only supplied findings and "
                 "evidence. Cite claims inline with exact [E#] IDs and finish with a Sources "
-                "section. Return JSON only with a report field."
+                "section. Use the same language as the research topic. Return JSON only with a "
+                "report field."
             ),
             prompt=prompt,
             response_type=ReportPayload,

@@ -43,6 +43,21 @@ async def test_offline_workflow_completes_with_valid_citations() -> None:
 
 
 @pytest.mark.asyncio
+async def test_offline_workflow_follows_chinese_topic_language() -> None:
+    graph = build_research_graph(MockPlanner(), MockWebRetriever(), StaticRetriever())
+
+    result = await graph.ainvoke(create_initial_state("金融行业多 Agent 应用"))
+
+    assert result["status"] == ResearchStatus.COMPLETED
+    assert result["plan"].objective.startswith("围绕")
+    assert result["accepted_evidence"][0].title.startswith("模拟来源")
+    assert result["report"].startswith("# 金融行业多 Agent 应用研究报告")
+    assert "## 研究目标" in result["report"]
+    assert "## 核心发现" in result["report"]
+    assert "## 参考来源" in result["report"]
+
+
+@pytest.mark.asyncio
 async def test_parallel_retrieval_combines_web_and_local_evidence() -> None:
     content = "Local evidence about the AI agent market"
     local = Evidence(

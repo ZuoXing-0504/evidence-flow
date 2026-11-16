@@ -20,6 +20,10 @@ from app.research.contracts import (
 )
 
 
+def _prefers_chinese(value: str) -> bool:
+    return any("\u4e00" <= character <= "\u9fff" for character in value)
+
+
 def _tokenize(value: str) -> set[str]:
     return {token.casefold() for token in value.replace("-", " ").split() if len(token) > 1}
 
@@ -139,22 +143,37 @@ class ResearchNodes:
         evidence_gap = self.minimum_evidence - len(state["accepted_evidence"])
         can_retry = state["iteration"] < state["max_iterations"]
         should_continue = evidence_gap > 0 and can_retry
+        chinese = _prefers_chinese(state["topic"])
         if not should_continue:
-            missing = [] if evidence_gap <= 0 else [f"At least {evidence_gap} more sources needed"]
+            if evidence_gap <= 0:
+                missing = []
+            elif chinese:
+                missing = [f"至少还需要 {evidence_gap} 个信息来源"]
+            else:
+                missing = [f"At least {evidence_gap} more sources needed"]
             return {"should_continue": False, "missing_information": missing}
 
         next_iteration = state["iteration"] + 1
-        supplemental_queries = [
-            f"{state['topic']} additional independent source round {next_iteration}",
-            f"{state['topic']} primary data round {next_iteration}",
-            f"{state['topic']} contrary evidence round {next_iteration}",
-        ]
+        if chinese:
+            supplemental_queries = [
+                f"{state['topic']} 补充独立来源 第 {next_iteration} 轮",
+                f"{state['topic']} 一手数据 第 {next_iteration} 轮",
+                f"{state['topic']} 反方证据 第 {next_iteration} 轮",
+            ]
+            missing_information = [f"还需要 {evidence_gap} 个补充来源"]
+        else:
+            supplemental_queries = [
+                f"{state['topic']} additional independent source round {next_iteration}",
+                f"{state['topic']} primary data round {next_iteration}",
+                f"{state['topic']} contrary evidence round {next_iteration}",
+            ]
+            missing_information = [f"Need {evidence_gap} additional sources"]
         return {
             "iteration": next_iteration,
             "should_continue": True,
             "search_queries": supplemental_queries,
             "query_history": supplemental_queries,
-            "missing_information": [f"Need {evidence_gap} additional sources"],
+            "missing_information": missing_information,
         }
 
     async def writer(self, state: ResearchState) -> dict[str, Any]:
@@ -164,21 +183,28 @@ class ResearchNodes:
                 state["topic"], plan, state["findings"], state["accepted_evidence"]
             )
             return {"report": report}
-        title = f"# {state['topic']} Research Report"
-        objective = f"\n\n## Objective\n\n{plan.objective}" if plan else ""
+        chinese = _prefers_chinese(state["topic"])
+        title = f"# {state['topic']}研究报告" if chinese else f"# {state['topic']} Research Report"
+        objective_heading = "研究目标" if chinese else "Objective"
+        objective = f"\n\n## {objective_heading}\n\n{plan.objective}" if plan else ""
         finding_lines = [
             f"- {finding.claim} [{state['accepted_evidence'][index].citation_id}]"
             for index, finding in enumerate(state["findings"])
         ]
-        findings = "\n\n## Findings\n\n" + (
-            "\n".join(finding_lines) if finding_lines else "No reliable evidence was retrieved."
+        findings_heading = "核心发现" if chinese else "Findings"
+        no_findings = "未检索到可靠证据。" if chinese else "No reliable evidence was retrieved."
+        findings = f"\n\n## {findings_heading}\n\n" + (
+            "\n".join(finding_lines) if finding_lines else no_findings
         )
         source_lines = [
-            f"- [{item.citation_id}] {item.title} - {item.url or 'Local knowledge base'}"
+            f"- [{item.citation_id}] {item.title} - "
+            f"{item.url or ('本地知识库' if chinese else 'Local knowledge base')}"
             for item in state["accepted_evidence"]
         ]
-        sources = "\n\n## Sources\n\n" + (
-            "\n".join(source_lines) if source_lines else "No sources available."
+        sources_heading = "参考来源" if chinese else "Sources"
+        no_sources = "暂无可用来源。" if chinese else "No sources available."
+        sources = f"\n\n## {sources_heading}\n\n" + (
+            "\n".join(source_lines) if source_lines else no_sources
         )
         return {"report": title + objective + findings + sources}
 
