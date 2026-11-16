@@ -15,6 +15,8 @@ from app.research.nodes import (
     terminal_failure,
 )
 
+ResearchGraph = CompiledStateGraph[ResearchState, None, ResearchState, ResearchState]
+
 
 def build_research_graph(
     planner: ResearchPlanner,
@@ -22,7 +24,7 @@ def build_research_graph(
     local_retriever: EvidenceRetriever,
     *,
     minimum_evidence: int = 3,
-) -> CompiledStateGraph:
+) -> ResearchGraph:
     nodes = ResearchNodes(
         planner,
         web_retriever,
@@ -102,5 +104,5 @@ def create_initial_state(
     )
 
 
-async def run_graph(graph: CompiledStateGraph, state: ResearchState) -> dict[str, Any]:
+async def run_graph(graph: ResearchGraph, state: ResearchState) -> dict[str, Any]:
     return await graph.ainvoke(state, config={"recursion_limit": 50})
