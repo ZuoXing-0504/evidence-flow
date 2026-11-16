@@ -222,7 +222,12 @@ onBeforeUnmount(() => streamController?.abort())
             </section>
 
             <section class="report-column">
-              <ReportView v-if="report" :content="report.content" />
+              <ReportView
+                v-if="report"
+                :topic="selected.topic"
+                :content="report.content"
+                :citation-errors="report.citation_errors"
+              />
               <EmptyState
                 v-else
                 :icon="BookOpenText"

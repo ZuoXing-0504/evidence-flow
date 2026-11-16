@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "test": "vitest run",
     "typecheck": "vue-tsc -b",
     "preview": "vite preview"
   },
@@ -17,11 +18,12 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
     "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.10.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "~5.7.2",
     "vite": "^6.0.5",
+    "vitest": "4.1.12",
     "vue-tsc": "^3.3.14"
   }
 }

@@ -132,7 +132,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .timeline-step.failed .timeline-marker { color: white; background: var(--red); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgb(56 107 134 / 12%); } }
 .report-column { min-width: 0; padding: 28px clamp(24px, 4vw, 62px) 64px; background: var(--surface); }
-.report-content { max-width: 800px; margin: 0 auto; color: #2b312f; font-family: "Literata", "Songti SC", Georgia, serif; font-size: 14px; line-height: 1.78; overflow-wrap: anywhere; }
+.report-view { max-width: 800px; margin: 0 auto; }
+.report-toolbar { min-height: 44px; margin: -8px 0 24px; padding-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--line); }
+.citation-audit { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; }
+.citation-audit.valid { color: var(--forest); }
+.citation-audit.invalid { color: var(--red); }
+.report-actions { display: flex; gap: 6px; }
+.report-actions .icon-button { width: 32px; height: 32px; color: var(--muted); }
+.citation-errors { margin: -12px 0 24px; padding: 10px 12px 10px 28px; color: var(--red); background: var(--red-soft); border: 1px solid #e9c4c0; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.report-content { color: #2b312f; font-family: "Literata", "Songti SC", Georgia, serif; font-size: 14px; line-height: 1.78; overflow-wrap: anywhere; }
 .report-content h1 { margin: 0 0 28px; color: var(--ink); font-size: 28px; line-height: 1.25; letter-spacing: 0; }
 .report-content h2 { margin: 34px 0 12px; padding-bottom: 8px; color: var(--ink); border-bottom: 1px solid var(--line); font-size: 18px; letter-spacing: 0; }
 .report-content h3 { margin: 24px 0 8px; font-size: 15px; letter-spacing: 0; }
@@ -281,6 +289,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .research-body.mobile-evidence { display: none; min-height: 0; }
   .progress-column { padding: 18px 14px; }
   .report-column { padding: 22px 17px 50px; }
+  .report-toolbar { margin-top: -4px; }
   .report-content { font-size: 13px; }
   .report-content h1 { font-size: 22px; }
   .evidence-panel.mobile-evidence-active { position: static; display: block; height: auto; padding: 14px 12px 30px; border-left: 0; }
@@ -303,4 +312,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .knowledge-stat { margin-left: 0; }
   .knowledge-stat + .knowledge-stat { margin-left: auto; }
   .document-grid { grid-template-columns: 1fr; }
+}
+
+@media print {
+  @page { margin: 16mm; }
+  :root { background: white; }
+  body { min-height: 0; background: white; }
+  .sidebar, .mobile-header, .mobile-nav, .task-panel, .research-header, .mobile-segments,
+  .progress-column, .evidence-panel, .report-actions, .error-banner { display: none !important; }
+  .app-shell, .app-shell.sidebar-collapsed { min-height: 0; padding: 0; }
+  .app-main, .research-workspace, .research-main, .research-body, .report-column {
+    display: block; min-height: 0; height: auto; padding: 0; background: white; border: 0;
+  }
+  .report-view { max-width: none; }
+  .report-toolbar { margin: 0 0 20px; }
+  .report-content { font-size: 11pt; line-height: 1.65; }
+  .report-content h1 { font-size: 22pt; }
+  .report-content h2 { break-after: avoid; }
+  .report-content p, .report-content li { orphans: 3; widows: 3; }
 }

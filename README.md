@@ -23,6 +23,8 @@ The project turns a research topic into a traceable report through planning, par
 - bounded provider retries, structured LLM output validation, and strict evidence ID mapping;
 - user-scoped document ingestion, chunking, Milvus retrieval, and semantic research memory;
 - Vue 3 research workbench with authenticated SSE progress, reports, evidence, and knowledge management;
+- citation validation status with Markdown download and print-ready PDF report delivery;
+- frontend unit tests for report rendering, export safety, and localized validation messages;
 - unit and integration tests for contracts and the complete graph.
 
 No real API key belongs in this repository. Copy `.env.example` to `.env` and provide secrets locally.
