@@ -8,7 +8,13 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from app.domain import ResearchEvent, ResearchEventType, ResearchNode, ResearchState, ResearchStatus
-from app.research.contracts import EventSink, EvidenceRetriever, ResearchPlanner
+from app.research.contracts import (
+    EventSink,
+    EvidenceRetriever,
+    ReportWriter,
+    ResearchAnalyst,
+    ResearchPlanner,
+)
 from app.research.nodes import (
     ResearchNodes,
     route_after_intent,
@@ -72,12 +78,16 @@ def build_research_graph(
     *,
     minimum_evidence: int = 3,
     event_sink: EventSink | None = None,
+    analyst: ResearchAnalyst | None = None,
+    writer: ReportWriter | None = None,
 ) -> ResearchGraph:
     nodes = ResearchNodes(
         planner,
         web_retriever,
         local_retriever,
         minimum_evidence=minimum_evidence,
+        analyst=analyst,
+        writer=writer,
     )
     graph = StateGraph(ResearchState)
 

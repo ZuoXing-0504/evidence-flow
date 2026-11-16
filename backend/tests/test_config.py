@@ -8,6 +8,7 @@ def test_default_settings_use_offline_search() -> None:
     settings = Settings(_env_file=None)
 
     assert settings.web_search_provider == "mock"
+    assert settings.llm_provider == "mock"
     assert settings.max_research_iterations == 2
 
 
@@ -20,6 +21,13 @@ def test_bocha_provider_requires_key() -> None:
     settings = Settings(web_search_provider="bocha", bocha_api_key="", _env_file=None)
 
     with pytest.raises(ValueError, match="BOCHA_API_KEY"):
+        settings.validate_runtime()
+
+
+def test_dashscope_provider_requires_key() -> None:
+    settings = Settings(llm_provider="dashscope", dashscope_api_key="", _env_file=None)
+
+    with pytest.raises(ValueError, match="DASHSCOPE_API_KEY"):
         settings.validate_runtime()
 
 

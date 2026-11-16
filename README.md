@@ -19,6 +19,8 @@ The project turns a research topic into a traceable report through planning, par
 - research task, report, evidence, cancellation, and SSE event APIs;
 - Argon2id password hashing and expiring JWT bearer authentication;
 - ownership checks across tasks, reports, evidence, cancellation, and event streams;
+- selectable Bocha web search and DashScope/Qwen planning, analysis, and report writing;
+- bounded provider retries, structured LLM output validation, and strict evidence ID mapping;
 - unit and integration tests for contracts and the complete graph.
 
 No real API key belongs in this repository. Copy `.env.example` to `.env` and provide secrets locally.
@@ -49,6 +51,10 @@ Register through `POST /api/auth/register`, then send the returned token as
 `Authorization: Bearer <token>` to the research endpoints. Interactive API documentation is
 available at `/docs`.
 
+The default `mock` providers run without paid credentials. To enable the real research path,
+set `LLM_PROVIDER=dashscope`, `WEB_SEARCH_PROVIDER=bocha`, `DASHSCOPE_API_KEY`, and
+`BOCHA_API_KEY` in the local `.env` file. Secrets must never be committed.
+
 ## Research flow
 
 ```text
@@ -58,9 +64,9 @@ Memory Recall -> Intent Router -> Planner
   -> Writer -> Citation Validator -> Memory Commit
 ```
 
-The current workflow uses deterministic mock adapters so it can be demonstrated and tested
-without paid credentials. Bocha, DashScope, Milvus retrieval, and the Vue workbench are
-introduced in subsequent milestones behind the same contracts.
+The workflow retains deterministic mock adapters so it can be demonstrated and tested without
+paid credentials. Milvus retrieval and the Vue workbench are introduced in subsequent milestones
+behind the same contracts.
 
 ## Repository layout
 

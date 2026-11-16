@@ -11,7 +11,7 @@ from app.domain import (
     ResearchStatus,
 )
 from app.research.citations import validate_citations
-from app.research.contracts import EvidenceRetriever, ResearchPlanner
+from app.research.contracts import EvidenceRetriever, ReportWriter, ResearchAnalyst, ResearchPlanner
 
 
 def _tokenize(value: str) -> set[str]:
@@ -26,11 +26,15 @@ class ResearchNodes:
         local_retriever: EvidenceRetriever,
         *,
         minimum_evidence: int = 3,
+        analyst: ResearchAnalyst | None = None,
+        writer: ReportWriter | None = None,
     ) -> None:
         self.planner = planner
         self.web_retriever = web_retriever
         self.local_retriever = local_retriever
         self.minimum_evidence = minimum_evidence
+        self.research_analyst = analyst
+        self.report_writer = writer
 
     async def memory_recall(self, state: ResearchState) -> dict[str, Any]:
         del state
@@ -89,6 +93,11 @@ class ResearchNodes:
         return {"accepted_evidence": accepted}
 
     async def analyst(self, state: ResearchState) -> dict[str, Any]:
+        if self.research_analyst is not None:
+            findings = await self.research_analyst.analyze(
+                state["topic"], state["accepted_evidence"]
+            )
+            return {"findings": findings}
         findings = [
             Finding(
                 claim=f"{item.title}: {item.content[:300]}",
@@ -123,6 +132,11 @@ class ResearchNodes:
 
     async def writer(self, state: ResearchState) -> dict[str, Any]:
         plan = state.get("plan")
+        if self.report_writer is not None:
+            report = await self.report_writer.write_report(
+                state["topic"], plan, state["findings"], state["accepted_evidence"]
+            )
+            return {"report": report}
         title = f"# {state['topic']} Research Report"
         objective = f"\n\n## Objective\n\n{plan.objective}" if plan else ""
         finding_lines = [

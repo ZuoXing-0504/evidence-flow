@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     dashscope_api_key: SecretStr = SecretStr("")
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    llm_provider: Literal["dashscope", "mock"] = "mock"
     llm_reasoning_model: str = "qwen-plus"
     llm_fast_model: str = "qwen-turbo"
     embedding_model: str = "text-embedding-v3"
@@ -40,6 +41,8 @@ class Settings(BaseSettings):
     bocha_api_key: SecretStr = SecretStr("")
     bocha_base_url: str = "https://api.bochaai.com/v1"
     web_search_provider: Literal["bocha", "mock"] = "mock"
+    bocha_results_per_query: int = Field(default=5, ge=1, le=10)
+    provider_timeout_seconds: float = Field(default=30.0, ge=5, le=120)
     max_research_iterations: int = Field(default=2, ge=0, le=5)
 
     @field_validator("app_cors_origins")
@@ -60,6 +63,8 @@ class Settings(BaseSettings):
             raise ValueError("APP_SECRET_KEY must contain at least 32 characters in production")
         if self.web_search_provider == "bocha" and not self.bocha_api_key.get_secret_value():
             raise ValueError("BOCHA_API_KEY is required when WEB_SEARCH_PROVIDER=bocha")
+        if self.llm_provider == "dashscope" and not self.dashscope_api_key.get_secret_value():
+            raise ValueError("DASHSCOPE_API_KEY is required when LLM_PROVIDER=dashscope")
 
 
 @lru_cache
