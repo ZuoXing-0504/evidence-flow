@@ -1,0 +1,53 @@
+[project]
+name = "evidence-flow-backend"
+version = "0.1.0"
+description = "Evidence-grounded multi-agent deep research backend"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic>=1.14,<2",
+  "argon2-cffi>=23.1,<26",
+  "arq>=0.26,<1",
+  "asyncpg>=0.30,<1",
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "langchain-openai>=0.3,<1",
+  "langgraph>=0.6,<2",
+  "pydantic-settings>=2.7,<3",
+  "pyjwt>=2.10,<3",
+  "pymilvus>=2.5,<3",
+  "python-multipart>=0.0.20,<1",
+  "redis>=5.2,<7",
+  "sqlalchemy[asyncio]>=2.0,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<10",
+  "pytest-asyncio>=0.25,<2",
+  "pytest-cov>=6,<8",
+  "ruff>=0.9,<1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --strict-config"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
