@@ -1,6 +1,9 @@
+from collections.abc import Awaitable, Callable
 from typing import Protocol
 
-from app.domain import Evidence, ResearchPlan
+from app.domain import Evidence, ResearchEvent, ResearchPlan
+
+EventSink = Callable[[ResearchEvent], Awaitable[None]]
 
 
 class ResearchPlanner(Protocol):

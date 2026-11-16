@@ -14,6 +14,9 @@ The project turns a research topic into a traceable report through planning, par
 - deterministic evidence deduplication, judging, analysis, and reflection;
 - bounded supplemental search with a two-iteration default;
 - citation-constrained Markdown reports and citation validation;
+- PostgreSQL persistence for tasks, evidence, findings, reports, and replayable events;
+- Redis/ARQ background execution with cancellation at graph node boundaries;
+- research task, report, evidence, cancellation, and SSE event APIs;
 - unit and integration tests for contracts and the complete graph.
 
 No real API key belongs in this repository. Copy `.env.example` to `.env` and provide secrets locally.
@@ -26,7 +29,9 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --project backend
+uv run --project backend alembic upgrade head
 uv run --project backend uvicorn app.main:app --reload --app-dir backend
+uv run --project backend arq app.jobs.WorkerSettings
 uv run --project backend pytest backend/tests
 ```
 
@@ -34,7 +39,7 @@ uv run --project backend pytest backend/tests
 
 ```bash
 docker compose up -d postgres redis etcd minio milvus
-docker compose --profile app up --build backend
+docker compose --profile app up --build backend worker
 ```
 
 The API is available at `http://localhost:8000`; health endpoints are `/health/live` and `/health/ready`.
@@ -49,8 +54,8 @@ Memory Recall -> Intent Router -> Planner
 ```
 
 The current workflow uses deterministic mock adapters so it can be demonstrated and tested
-without paid credentials. Bocha, DashScope, Milvus persistence, background jobs, SSE, and the
-Vue workbench are introduced in subsequent milestones behind the same contracts.
+without paid credentials. Bocha, DashScope, Milvus retrieval, authentication, and the Vue
+workbench are introduced in subsequent milestones behind the same contracts.
 
 ## Repository layout
 

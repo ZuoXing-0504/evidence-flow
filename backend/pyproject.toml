@@ -23,6 +23,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "aiosqlite>=0.20,<1",
   "mypy>=1.14,<2",
   "pytest>=8.3,<10",
   "pytest-asyncio>=0.25,<2",
@@ -51,4 +52,7 @@ python_version = "3.12"
 platform = "linux"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+concurrency = ["greenlet", "thread"]
 

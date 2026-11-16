@@ -5,13 +5,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
+from app.api.routes.research import router as research_router
 from app.core.config import get_settings
+from app.db import get_database
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     get_settings().validate_runtime()
     yield
+    await get_database().dispose()
 
 
 settings = get_settings()
@@ -29,6 +32,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Last-Event-ID"],
 )
 app.include_router(health_router)
+app.include_router(research_router)
 
 
 @app.get("/", include_in_schema=False)

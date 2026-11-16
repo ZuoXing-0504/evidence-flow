@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from app.domain import ResearchNode, ResearchState, ResearchStatus
-from app.research.contracts import EvidenceRetriever, ResearchPlanner
+from app.domain import ResearchEvent, ResearchEventType, ResearchNode, ResearchState, ResearchStatus
+from app.research.contracts import EventSink, EvidenceRetriever, ResearchPlanner
 from app.research.nodes import (
     ResearchNodes,
     route_after_intent,
@@ -16,6 +17,52 @@ from app.research.nodes import (
 )
 
 ResearchGraph = CompiledStateGraph[ResearchState, None, ResearchState, ResearchState]
+NodeFunction = Callable[[ResearchState], Awaitable[dict[str, Any]]]
+
+
+def _event_payload(result: dict[str, Any]) -> dict[str, Any]:
+    payload: dict[str, Any] = {"updated_fields": sorted(result)}
+    for field in ("candidate_evidence", "accepted_evidence", "findings", "search_queries"):
+        value = result.get(field)
+        if isinstance(value, list):
+            payload[f"{field}_count"] = len(value)
+    if "iteration" in result:
+        payload["iteration"] = result["iteration"]
+    return payload
+
+
+def _instrument(node: ResearchNode, function: NodeFunction, sink: EventSink) -> NodeFunction:
+    async def instrumented(state: ResearchState) -> dict[str, Any]:
+        await sink(
+            ResearchEvent(
+                task_id=state["task_id"],
+                node=node,
+                event_type=ResearchEventType.NODE_STARTED,
+            )
+        )
+        try:
+            result = await function(state)
+        except Exception as exc:
+            await sink(
+                ResearchEvent(
+                    task_id=state["task_id"],
+                    node=node,
+                    event_type=ResearchEventType.NODE_FAILED,
+                    payload={"error": str(exc)},
+                )
+            )
+            raise
+        await sink(
+            ResearchEvent(
+                task_id=state["task_id"],
+                node=node,
+                event_type=ResearchEventType.NODE_COMPLETED,
+                payload=_event_payload(result),
+            )
+        )
+        return result
+
+    return instrumented
 
 
 def build_research_graph(
@@ -24,6 +71,7 @@ def build_research_graph(
     local_retriever: EvidenceRetriever,
     *,
     minimum_evidence: int = 3,
+    event_sink: EventSink | None = None,
 ) -> ResearchGraph:
     nodes = ResearchNodes(
         planner,
@@ -33,18 +81,25 @@ def build_research_graph(
     )
     graph = StateGraph(ResearchState)
 
-    graph.add_node(ResearchNode.MEMORY_RECALL.value, nodes.memory_recall)
-    graph.add_node(ResearchNode.INTENT_ROUTER.value, nodes.intent_router)
-    graph.add_node(ResearchNode.PLANNER.value, nodes.planner_node)
+    def observed(node: ResearchNode, function: NodeFunction) -> NodeFunction:
+        return _instrument(node, function, event_sink) if event_sink else function
+
+    def add_observed_node(node: ResearchNode, function: NodeFunction) -> None:
+        # LangGraph's overloads do not retain callable compatibility after decoration.
+        graph.add_node(node.value, cast(Any, observed(node, function)))
+
+    add_observed_node(ResearchNode.MEMORY_RECALL, nodes.memory_recall)
+    add_observed_node(ResearchNode.INTENT_ROUTER, nodes.intent_router)
+    add_observed_node(ResearchNode.PLANNER, nodes.planner_node)
     graph.add_node("dispatch_search", nodes.dispatch_search)
-    graph.add_node(ResearchNode.WEB_SCOUT.value, nodes.web_scout)
-    graph.add_node(ResearchNode.LOCAL_SCOUT.value, nodes.local_scout)
-    graph.add_node(ResearchNode.EVIDENCE_JUDGE.value, nodes.evidence_judge)
-    graph.add_node(ResearchNode.ANALYST.value, nodes.analyst)
-    graph.add_node(ResearchNode.REFLECT.value, nodes.reflect)
-    graph.add_node(ResearchNode.WRITER.value, nodes.writer)
-    graph.add_node(ResearchNode.CITATION_VALIDATOR.value, nodes.citation_validator)
-    graph.add_node(ResearchNode.MEMORY_COMMIT.value, nodes.memory_commit)
+    add_observed_node(ResearchNode.WEB_SCOUT, nodes.web_scout)
+    add_observed_node(ResearchNode.LOCAL_SCOUT, nodes.local_scout)
+    add_observed_node(ResearchNode.EVIDENCE_JUDGE, nodes.evidence_judge)
+    add_observed_node(ResearchNode.ANALYST, nodes.analyst)
+    add_observed_node(ResearchNode.REFLECT, nodes.reflect)
+    add_observed_node(ResearchNode.WRITER, nodes.writer)
+    add_observed_node(ResearchNode.CITATION_VALIDATOR, nodes.citation_validator)
+    add_observed_node(ResearchNode.MEMORY_COMMIT, nodes.memory_commit)
     graph.add_node("failed", terminal_failure)
 
     graph.add_edge(START, ResearchNode.MEMORY_RECALL.value)
