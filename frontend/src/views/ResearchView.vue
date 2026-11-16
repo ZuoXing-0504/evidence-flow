@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { AlertTriangle, BookOpenText, FileSearch, OctagonX, RefreshCw } from "@lucide/vue"
+import { AlertTriangle, BookOpenText, FileSearch, OctagonX, RefreshCw, Trash2 } from "@lucide/vue"
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
 
 import { ApiError, researchApi, streamResearchEvents } from "@/api"
 import AppShell from "@/components/AppShell.vue"
 import CreateResearchDialog from "@/components/CreateResearchDialog.vue"
+import DeleteResearchDialog from "@/components/DeleteResearchDialog.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import EvidencePanel from "@/components/EvidencePanel.vue"
 import ReportView from "@/components/ReportView.vue"
@@ -12,6 +13,7 @@ import ResearchTimeline from "@/components/ResearchTimeline.vue"
 import StatusPill from "@/components/StatusPill.vue"
 import TaskList from "@/components/TaskList.vue"
 import { formatApiDate } from "@/dates"
+import { isTerminalResearchStatus } from "@/status"
 import type { Evidence, Report, ResearchEvent, ResearchTask } from "@/types"
 
 const tasks = ref<ResearchTask[]>([])
@@ -23,6 +25,9 @@ const loadingTasks = ref(true)
 const loadingDetail = ref(false)
 const creating = ref(false)
 const cancelling = ref(false)
+const deleting = ref(false)
+const deleteDialogOpen = ref(false)
+const deleteError = ref("")
 const dialogOpen = ref(false)
 const error = ref("")
 const createError = ref("")
@@ -37,6 +42,10 @@ const terminal = computed(() =>
 
 const canCancel = computed(() =>
   selected.value ? ["queued", "running"].includes(selected.value.status) : false,
+)
+
+const canDelete = computed(() =>
+  selected.value ? isTerminalResearchStatus(selected.value.status) : false,
 )
 
 function errorMessage(value: unknown): string {
@@ -145,6 +154,28 @@ async function cancelTask(): Promise<void> {
   }
 }
 
+async function deleteTask(): Promise<void> {
+  if (!selected.value || !canDelete.value) return
+  deleting.value = true
+  deleteError.value = ""
+  const taskId = selected.value.id
+  try {
+    await researchApi.remove(taskId)
+    streamController?.abort()
+    tasks.value = tasks.value.filter((task) => task.id !== taskId)
+    selected.value = null
+    report.value = null
+    evidence.value = []
+    events.value = []
+    deleteDialogOpen.value = false
+    if (tasks.value[0]) await selectTask(tasks.value[0].id)
+  } catch (value) {
+    deleteError.value = errorMessage(value)
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(() => void loadTasks())
 onBeforeUnmount(() => streamController?.abort())
 </script>
@@ -192,15 +223,26 @@ onBeforeUnmount(() => streamController?.abort())
                 {{ selected.warnings.join(" · ") }}
               </p>
             </div>
-            <button
-              v-if="canCancel"
-              class="text-button danger"
-              type="button"
-              :disabled="cancelling"
-              @click="cancelTask"
-            >
-              <OctagonX :size="16" /> {{ cancelling ? "正在取消" : "取消任务" }}
-            </button>
+            <div class="research-header-actions">
+              <button
+                v-if="canCancel"
+                class="text-button danger"
+                type="button"
+                :disabled="cancelling"
+                @click="cancelTask"
+              >
+                <OctagonX :size="16" /> {{ cancelling ? "正在取消" : "取消任务" }}
+              </button>
+              <button
+                v-if="canDelete"
+                class="icon-button danger-icon"
+                type="button"
+                title="删除研究任务"
+                @click="deleteDialogOpen = true"
+              >
+                <Trash2 :size="17" />
+              </button>
+            </div>
           </header>
 
           <div class="mobile-segments">
@@ -253,6 +295,14 @@ onBeforeUnmount(() => streamController?.abort())
       :error="createError"
       @close="dialogOpen = false"
       @submit="createResearch"
+    />
+    <DeleteResearchDialog
+      :open="deleteDialogOpen"
+      :topic="selected?.topic ?? ''"
+      :loading="deleting"
+      :error="deleteError"
+      @close="deleteDialogOpen = false"
+      @confirm="deleteTask"
     />
   </AppShell>
 </template>

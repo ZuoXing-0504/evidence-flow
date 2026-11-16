@@ -21,6 +21,7 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   "Research task not found": "研究任务不存在",
   "Research worker is unavailable": "研究任务处理服务暂不可用",
   "Task is already terminal": "任务已经结束",
+  "Active research task cannot be deleted": "进行中的研究任务无法删除",
   "Report is not ready": "报告尚未生成",
   "Last-Event-ID must be a non-negative integer": "事件游标必须是非负整数",
 }
@@ -88,6 +89,8 @@ export const researchApi = {
     }),
   cancel: (id: string) =>
     request<ResearchTask>(`/api/research/${id}/cancel`, { method: "POST" }),
+  remove: (id: string) =>
+    request<void>(`/api/research/${id}`, { method: "DELETE" }),
   report: (id: string) => request<Report>(`/api/research/${id}/report`),
   evidence: (id: string) => request<Evidence[]>(`/api/research/${id}/evidence`),
 }

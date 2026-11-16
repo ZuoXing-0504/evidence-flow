@@ -80,6 +80,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .text-button.primary:hover { background: var(--forest-dark); }
 .text-button.secondary:hover { background: var(--surface-alt); }
 .text-button.danger { color: var(--red); border-color: #dfbbb7; background: var(--red-soft); }
+.text-button.danger.solid { color: white; background: var(--red); border-color: var(--red); }
+.text-button.danger.solid:hover { background: #842e29; }
 
 .eyebrow { margin: 0 0 5px; color: var(--forest); font-size: 10px; line-height: 1.2; font-weight: 700; text-transform: none; letter-spacing: 0; }
 .panel-heading { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
@@ -113,6 +115,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .research-main { min-width: 0; min-height: 100vh; background: var(--surface-soft); }
 .research-header { min-height: 116px; padding: 21px 26px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .research-title-block { min-width: 0; }
+.research-header-actions { display: flex; align-items: center; gap: 8px; }
 .research-title-meta { display: flex; align-items: center; gap: 10px; color: var(--faint); font-size: 11px; }
 .research-header h1 { max-width: 900px; margin: 11px 0 0; font-family: "Literata", "Songti SC", Georgia, serif; font-size: 23px; line-height: 1.25; letter-spacing: 0; overflow-wrap: anywhere; }
 .warning-copy { margin: 8px 0 0; color: var(--amber); font-size: 11px; }
@@ -178,6 +181,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .dialog-backdrop { position: fixed; inset: 0; z-index: 100; padding: 20px; display: grid; place-items: center; background: rgb(14 24 20 / 58%); backdrop-filter: blur(2px); }
 .dialog { width: min(520px, 100%); max-height: calc(100vh - 40px); padding: 22px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow); overflow-y: auto; }
 .dialog.document-dialog { width: min(680px, 100%); }
+.dialog.confirm-dialog { width: min(460px, 100%); }
 .dialog > header, .dialog > footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .dialog h2 { margin: 0; font-size: 19px; letter-spacing: 0; }
 .dialog > footer { justify-content: flex-end; margin-top: 20px; }
@@ -189,6 +193,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .range-value { position: absolute; right: 0; top: 0; color: var(--forest); }
 .optional-label { color: var(--faint); font-weight: 400; }
 .form-error { margin: 12px 0 0; padding: 9px 10px; color: var(--red); background: var(--red-soft); border-radius: 5px; font-size: 12px; }
+.danger-copy { color: var(--red); }
+.confirm-copy { margin: 18px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 
 .auth-page { min-height: 100vh; display: grid; grid-template-columns: minmax(360px, 44%) 1fr; background: var(--surface); }
 .auth-intro { min-height: 100vh; padding: 34px clamp(32px, 5vw, 78px); display: flex; flex-direction: column; color: white; background: #18241f; }

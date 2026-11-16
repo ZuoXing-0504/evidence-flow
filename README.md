@@ -1,71 +1,26 @@
 # EvidenceFlow
 
-EvidenceFlow is an evidence-grounded multi-agent deep research system built with LangGraph, Milvus, FastAPI, and Vue 3.
+EvidenceFlow 是一个基于 **LangGraph、Milvus、FastAPI 与 Vue 3** 构建的证据驱动多 Agent 深度研究系统。
 
-The project turns a research topic into a traceable report through planning, parallel web and local retrieval, evidence judging, analysis, reflection, citation-constrained writing, and citation validation.
+用户输入研究主题后，系统会依次完成意图识别、任务规划、并行检索、证据评审、分析反思和报告写作，最终生成带来源编号、可校验、可追溯的 Markdown 研究报告。
 
-## Implemented
+## 核心能力
 
-- strict environment-based configuration;
-- shared research, evidence, finding, and event contracts;
-- FastAPI liveness and readiness endpoints;
-- local PostgreSQL, Redis, MinIO, etcd, and Milvus infrastructure;
-- an offline LangGraph research workflow with planning and parallel scouts;
-- deterministic evidence deduplication, judging, analysis, and reflection;
-- bounded supplemental search with a two-iteration default;
-- citation-constrained Markdown reports and citation validation;
-- PostgreSQL persistence for tasks, evidence, findings, reports, and replayable events;
-- Redis/ARQ background execution with cancellation at graph node boundaries;
-- research task, report, evidence, cancellation, and SSE event APIs;
-- Argon2id password hashing and expiring JWT bearer authentication;
-- ownership checks across tasks, reports, evidence, cancellation, and event streams;
-- selectable Bocha web search and DashScope/Qwen planning, analysis, and report writing;
-- bounded provider retries, structured LLM output validation, and strict evidence ID mapping;
-- user-scoped document ingestion, chunking, Milvus retrieval, and semantic research memory;
-- Vue 3 research workbench with authenticated SSE progress, reports, evidence, and knowledge management;
-- citation validation status with Markdown download and print-ready PDF report delivery;
-- frontend unit tests for report rendering, export safety, and localized validation messages;
-- unit and integration tests for contracts and the complete graph.
+- 使用 LangGraph 编排 Memory Recall、Intent Router、Planner、Web Scout、Local Scout、Evidence Judge、Analyst、Reflect、Writer、Citation Validator 等研究节点；
+- 通过 Bocha Web Search 与 Milvus RAG 并行召回外部资料和用户私有知识；
+- 对候选证据执行相关性评分、可信度评分、去重、冲突处理与引用编号；
+- 在证据不足时自动生成补充查询，执行有次数上限的反思补搜；
+- 对报告引用进行约束和校验，阻止不存在的证据编号进入可信报告；
+- 支持短期任务状态、用户级长期偏好和 Milvus 向量语义记忆；
+- 使用 PostgreSQL 持久化任务、证据、分析结论、报告与可回放事件；
+- 使用 Redis + ARQ 异步执行研究任务，并支持节点边界取消；
+- 使用 JWT 与 Argon2id 完成身份认证，所有任务、报告、证据和知识文档均按用户隔离；
+- 通过 FastAPI SSE 实时输出节点进度，断线后可依据事件编号继续回放；
+- 提供中文 Vue 3 研究工作台，支持响应式桌面端与移动端；
+- 支持 Markdown 下载、打印/另存为 PDF、引用校验结果展示和历史任务删除；
+- Mock Provider 默认无需付费密钥，便于本地演示和自动化测试。
 
-No real API key belongs in this repository. Copy `.env.example` to `.env` and provide secrets locally.
-
-## Quick start
-
-### Backend development
-
-Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
-
-```bash
-uv sync --project backend
-uv run --project backend alembic upgrade head
-uv run --project backend uvicorn app.main:app --reload --app-dir backend
-uv run --project backend arq app.jobs.WorkerSettings
-uv run --project backend pytest backend/tests
-```
-
-### Docker infrastructure
-
-```bash
-docker compose up -d postgres redis etcd minio milvus
-docker compose --profile app up --build backend worker frontend
-```
-
-The workbench is available at `http://localhost:5173` and the API at `http://localhost:8000`;
-health endpoints are `/health/live` and `/health/ready`.
-Register through `POST /api/auth/register`, then send the returned token as
-`Authorization: Bearer <token>` to the research endpoints. Interactive API documentation is
-available at `/docs`.
-
-The default `mock` providers run without paid credentials. To enable the real research path,
-set `LLM_PROVIDER=dashscope`, `WEB_SEARCH_PROVIDER=bocha`, `DASHSCOPE_API_KEY`, and
-`BOCHA_API_KEY` in the local `.env` file. Secrets must never be committed.
-
-`POST /api/documents` accepts a title, text content, and optional source URI. Docker deployments
-use Milvus as the shared vector store; deterministic embeddings keep this path usable without an
-embedding API. Set `EMBEDDING_PROVIDER=dashscope` to use `text-embedding-v3`. The in-memory vector
-store is intended only for tests or a single-process development session.
-
-## Research flow
+## 研究流程
 
 ```text
 Memory Recall -> Intent Router -> Planner
@@ -74,18 +29,108 @@ Memory Recall -> Intent Router -> Planner
   -> Writer -> Citation Validator -> Memory Commit
 ```
 
-The workflow retains deterministic mock adapters so it can be demonstrated and tested without
-paid credentials.
+当 Reflect 判断证据不足且尚未达到迭代上限时，流程会生成补搜查询并重新进入双路检索，形成“检索 - 分析 - 补搜”的闭环。
 
-## Repository layout
+## 技术栈
+
+| 层级 | 技术 |
+| --- | --- |
+| Agent 编排 | LangGraph、Pydantic |
+| API 与异步任务 | FastAPI、SSE、ARQ、Redis |
+| 数据与检索 | PostgreSQL、SQLAlchemy、Alembic、Milvus、MinIO、etcd |
+| 模型与搜索 | DashScope / Qwen、Bocha Web Search、内置 Mock Provider |
+| 前端 | Vue 3、TypeScript、Vite、Pinia、Vue Router |
+| 工程质量 | Pytest、Vitest、Ruff、MyPy、Docker Compose、GitHub Actions |
+
+## 快速开始
+
+### 1. 准备配置
+
+需要 Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22 和 Docker。
+
+```bash
+cp .env.example .env
+```
+
+默认配置使用 Mock Provider，不需要任何付费 API Key。请勿把真实密钥提交到仓库。
+
+### 2. 启动基础设施
+
+```bash
+docker compose up -d postgres redis etcd minio milvus
+```
+
+### 3. 启动后端与 Worker
+
+```bash
+uv sync --project backend
+uv run --project backend alembic upgrade head
+uv run --project backend uvicorn app.main:app --reload --app-dir backend
+uv run --project backend arq app.jobs.WorkerSettings
+```
+
+API 默认地址为 `http://localhost:8000`，接口文档位于 `http://localhost:8000/docs`。
+
+### 4. 启动前端
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+研究工作台默认位于 `http://localhost:5173`。
+
+也可以使用 Docker 一次启动完整应用：
+
+```bash
+docker compose --profile app up --build
+```
+
+## 接入真实服务
+
+在本地 `.env` 中设置：
+
+```dotenv
+LLM_PROVIDER=dashscope
+WEB_SEARCH_PROVIDER=bocha
+EMBEDDING_PROVIDER=dashscope
+DASHSCOPE_API_KEY=your-key
+BOCHA_API_KEY=your-key
+```
+
+Provider 调用具备超时、有限重试、结构化输出校验与严格证据 ID 映射。即使不配置真实服务，系统仍可通过确定性的 Mock 数据完整演示研究链路。
+
+## 知识库
+
+`POST /api/documents` 接收标题、正文和可选来源链接。系统会分块、生成向量并写入当前用户的 Milvus 分区，研究任务中的 Local Scout 只会召回该用户自己的内容。
+
+Docker 环境使用 Milvus 作为共享向量存储；测试和单进程开发也可使用内存向量存储。默认确定性 Embedding 不依赖外部接口，配置 `EMBEDDING_PROVIDER=dashscope` 后会改用 `text-embedding-v3`。
+
+## 测试与质量检查
+
+```bash
+uv run --project backend pytest backend/tests
+uv run --project backend ruff check backend
+uv run --project backend ruff format --check backend
+uv run --project backend mypy backend/app
+
+cd frontend
+npm test
+npm run build
+```
+
+GitHub Actions 会分别验证后端、前端和 Docker Compose 配置。
+
+## 项目结构
 
 ```text
-backend/       FastAPI application, domain contracts, graph, services, and tests
-frontend/      Vue 3 research workbench and Nginx runtime
-docker-compose.yml
+backend/                 FastAPI 服务、领域模型、Agent 图、检索适配器与测试
+frontend/                Vue 3 中文研究工作台与 Nginx 运行配置
+.github/workflows/       持续集成配置
+docker-compose.yml       PostgreSQL、Redis、Milvus 与应用编排
 ```
 
 ## License
 
 MIT
-

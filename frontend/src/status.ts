@@ -16,3 +16,7 @@ const STATUS_LABELS: Record<DisplayStatus, string> = {
 export function statusLabel(status: DisplayStatus): string {
   return STATUS_LABELS[status]
 }
+
+export function isTerminalResearchStatus(status: ResearchStatus): boolean {
+  return ["completed", "completed_with_warnings", "failed", "cancelled"].includes(status)
+}

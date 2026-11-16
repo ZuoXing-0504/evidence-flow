@@ -53,6 +53,10 @@ class ResearchRepository:
         )
         return list(result)
 
+    async def delete_task(self, task: ResearchTaskRecord) -> None:
+        await self.session.delete(task)
+        await self.session.flush()
+
     async def mark_running(self, task: ResearchTaskRecord) -> None:
         task.status = ResearchStatus.RUNNING.value
         task.started_at = datetime.now(UTC)

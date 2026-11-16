@@ -149,6 +149,29 @@ async def test_queued_task_can_be_cancelled(tmp_path: Path) -> None:
             events = await client.get(f"/api/research/{task_id}/events", headers=headers)
             assert "event: task_cancelled" in events.text
 
+            deleted = await client.delete(f"/api/research/{task_id}", headers=headers)
+            assert deleted.status_code == 204
+            assert (
+                await client.get(f"/api/research/{task_id}", headers=headers)
+            ).status_code == 404
+            assert (await client.get("/api/research", headers=headers)).json()["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_active_task_cannot_be_deleted(tmp_path: Path) -> None:
+    async for database in _database(tmp_path / "delete-active.db"):
+        async for client in _client(database, RecordingDispatcher()):
+            headers = await _auth_headers(client)
+            created = await client.post(
+                "/api/research", json={"topic": "Active research"}, headers=headers
+            )
+            task_id = created.json()["id"]
+
+            response = await client.delete(f"/api/research/{task_id}", headers=headers)
+
+            assert response.status_code == 409
+            assert response.json()["detail"] == "Active research task cannot be deleted"
+
 
 @pytest.mark.asyncio
 async def test_pending_report_and_invalid_event_cursor_are_rejected(tmp_path: Path) -> None:
@@ -212,6 +235,9 @@ async def test_research_tasks_are_isolated_between_users(tmp_path: Path) -> None
             ).status_code == 404
             assert (
                 await client.post(f"/api/research/{task_id}/cancel", headers=other)
+            ).status_code == 404
+            assert (
+                await client.delete(f"/api/research/{task_id}", headers=other)
             ).status_code == 404
             assert (await client.get("/api/research", headers=other)).json()["items"] == []
 

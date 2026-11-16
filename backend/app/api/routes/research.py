@@ -134,6 +134,20 @@ async def cancel_research(task_id: UUID, session: Session, user: CurrentUser) ->
     return task
 
 
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_research(task_id: UUID, session: Session, user: CurrentUser) -> Response:
+    repository = ResearchRepository(session)
+    task = await _owned_task(repository, task_id, user.id)
+    if task.status not in TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Active research task cannot be deleted",
+        )
+    await repository.delete_task(task)
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{task_id}/report", response_model=ReportResponse)
 async def get_report(task_id: UUID, session: Session, user: CurrentUser) -> object:
     repository = ResearchRepository(session)
