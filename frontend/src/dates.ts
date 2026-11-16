@@ -4,9 +4,9 @@ export function parseApiDate(value: string): Date {
 }
 
 export function formatApiDate(value: string): string {
-  return parseApiDate(value).toLocaleString()
+  return parseApiDate(value).toLocaleString("zh-CN", { hour12: false })
 }
 
 export function formatApiDay(value: string): string {
-  return parseApiDate(value).toLocaleDateString()
+  return parseApiDate(value).toLocaleDateString("zh-CN")
 }

@@ -10,6 +10,20 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ""
 const TOKEN_KEY = "evidence-flow-token"
+const API_ERROR_MESSAGES: Record<string, string> = {
+  "Invalid or missing access token": "登录状态已失效，请重新登录",
+  "Email is already registered": "该邮箱已注册",
+  "Invalid email or password": "邮箱或密码错误",
+  "Document not found": "文档不存在",
+  "This document content is already registered": "相同内容的文档已存在",
+  "Document vector indexing failed": "文档向量索引失败",
+  "Document vectors could not be deleted": "无法删除文档向量",
+  "Research task not found": "研究任务不存在",
+  "Research worker is unavailable": "研究任务处理服务暂不可用",
+  "Task is already terminal": "任务已经结束",
+  "Report is not ready": "报告尚未生成",
+  "Last-Event-ID must be a non-negative integer": "事件游标必须是非负整数",
+}
 
 export class ApiError extends Error {
   constructor(
@@ -33,10 +47,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const response = await fetch(`${API_BASE}${path}`, { ...options, headers })
   if (!response.ok) {
-    let detail = `Request failed with status ${response.status}`
+    let detail = `请求失败（状态码 ${response.status}）`
     try {
-      const body = (await response.json()) as { detail?: string }
-      if (body.detail) detail = body.detail
+      const body = (await response.json()) as { detail?: unknown }
+      if (typeof body.detail === "string") {
+        detail = API_ERROR_MESSAGES[body.detail] ?? body.detail
+      } else if (Array.isArray(body.detail)) {
+        detail = "提交内容不符合要求，请检查后重试"
+      }
     } catch {
       // The status remains useful when an upstream proxy returns a non-JSON response.
     }
@@ -99,7 +117,7 @@ export async function streamResearchEvents(
     signal,
   })
   if (!response.ok || !response.body) {
-    throw new ApiError("Could not connect to the research event stream", response.status)
+    throw new ApiError("无法连接研究任务事件流", response.status)
   }
 
   const reader = response.body.getReader()

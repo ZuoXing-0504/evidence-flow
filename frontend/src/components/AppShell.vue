@@ -30,14 +30,14 @@ function logout(): void {
         <span class="brand-name">EvidenceFlow</span>
       </div>
 
-      <nav class="primary-nav" aria-label="Primary navigation">
-        <RouterLink to="/research" title="Research">
+      <nav class="primary-nav" aria-label="主导航">
+        <RouterLink to="/research" title="深度研究">
           <BookOpenText :size="19" />
-          <span>Research</span>
+          <span>深度研究</span>
         </RouterLink>
-        <RouterLink to="/knowledge" title="Knowledge base">
+        <RouterLink to="/knowledge" title="知识库">
           <Database :size="19" />
-          <span>Knowledge</span>
+          <span>知识库</span>
         </RouterLink>
       </nav>
 
@@ -48,19 +48,19 @@ function logout(): void {
             <strong>{{ auth.user?.display_name }}</strong>
             <small>{{ auth.user?.email }}</small>
           </span>
-          <button class="icon-button subtle" type="button" title="Sign out" @click="logout">
+          <button class="icon-button subtle" type="button" title="退出登录" @click="logout">
             <LogOut :size="17" />
           </button>
         </div>
         <button
           class="collapse-button"
           type="button"
-          :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
           @click="collapsed = !collapsed"
         >
           <PanelLeftOpen v-if="collapsed" :size="17" />
           <PanelLeftClose v-else :size="17" />
-          <span>{{ collapsed ? "Expand" : "Collapse" }}</span>
+          <span>{{ collapsed ? "展开" : "收起" }}</span>
         </button>
       </div>
     </aside>
@@ -70,7 +70,7 @@ function logout(): void {
         <span class="brand-mark"><Network :size="18" /></span>
         <span class="brand-name">EvidenceFlow</span>
       </div>
-      <button class="icon-button" type="button" title="Sign out" @click="logout">
+      <button class="icon-button" type="button" title="退出登录" @click="logout">
         <LogOut :size="18" />
       </button>
     </header>
@@ -79,9 +79,9 @@ function logout(): void {
       <slot />
     </main>
 
-    <nav class="mobile-nav" aria-label="Mobile navigation">
-      <RouterLink to="/research"><BookOpenText :size="19" /><span>Research</span></RouterLink>
-      <RouterLink to="/knowledge"><Database :size="19" /><span>Knowledge</span></RouterLink>
+    <nav class="mobile-nav" aria-label="移动端导航">
+      <RouterLink to="/research"><BookOpenText :size="19" /><span>研究</span></RouterLink>
+      <RouterLink to="/knowledge"><Database :size="19" /><span>知识库</span></RouterLink>
     </nav>
   </div>
 </template>

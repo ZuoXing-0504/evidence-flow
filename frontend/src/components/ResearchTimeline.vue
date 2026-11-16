@@ -7,17 +7,17 @@ import type { ResearchEvent, ResearchNode } from "@/types"
 const props = defineProps<{ events: ResearchEvent[]; taskTerminal: boolean }>()
 
 const stages: { node: ResearchNode; label: string }[] = [
-  { node: "memory_recall", label: "Memory recall" },
-  { node: "intent_router", label: "Intent routing" },
-  { node: "planner", label: "Research plan" },
-  { node: "web_scout", label: "Web search" },
-  { node: "local_scout", label: "Local knowledge" },
-  { node: "evidence_judge", label: "Evidence review" },
-  { node: "analyst", label: "Analysis" },
-  { node: "reflect", label: "Gap reflection" },
-  { node: "writer", label: "Report writing" },
-  { node: "citation_validator", label: "Citation check" },
-  { node: "memory_commit", label: "Memory commit" },
+  { node: "memory_recall", label: "记忆召回" },
+  { node: "intent_router", label: "意图路由" },
+  { node: "planner", label: "研究规划" },
+  { node: "web_scout", label: "联网检索" },
+  { node: "local_scout", label: "本地知识检索" },
+  { node: "evidence_judge", label: "证据评审" },
+  { node: "analyst", label: "综合分析" },
+  { node: "reflect", label: "缺口反思" },
+  { node: "writer", label: "报告撰写" },
+  { node: "citation_validator", label: "引用校验" },
+  { node: "memory_commit", label: "记忆沉淀" },
 ]
 
 const nodeState = computed(() => {

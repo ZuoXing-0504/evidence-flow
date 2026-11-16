@@ -51,7 +51,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function errorMessage(error: unknown): string {
-    return error instanceof ApiError ? error.message : "The service could not be reached"
+    return error instanceof ApiError ? error.message : "无法连接服务，请稍后重试"
   }
 
   return {

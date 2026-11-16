@@ -40,7 +40,7 @@ const canCancel = computed(() =>
 )
 
 function errorMessage(value: unknown): string {
-  return value instanceof ApiError ? value.message : "The research service could not be reached"
+  return value instanceof ApiError ? value.message : "无法连接研究服务，请稍后重试"
 }
 
 async function loadTasks(selectFirst = true): Promise<void> {
@@ -164,7 +164,7 @@ onBeforeUnmount(() => streamController?.abort())
         <div v-if="error" class="error-banner">
           <AlertTriangle :size="17" />
           <span>{{ error }}</span>
-          <button class="icon-button subtle" type="button" title="Retry" @click="loadTasks(false)">
+          <button class="icon-button subtle" type="button" title="重试" @click="loadTasks(false)">
             <RefreshCw :size="16" />
           </button>
         </div>
@@ -172,11 +172,11 @@ onBeforeUnmount(() => streamController?.abort())
         <EmptyState
           v-if="!selected && !loadingTasks"
           :icon="FileSearch"
-          title="No research selected"
-          detail="Start a research task to build an evidence-backed report."
+          title="尚未选择研究任务"
+          detail="发起一个研究任务，生成有证据支撑的深度报告。"
         >
           <button class="text-button primary" type="button" @click="dialogOpen = true">
-            New research
+            新建研究
           </button>
         </EmptyState>
 
@@ -199,24 +199,24 @@ onBeforeUnmount(() => streamController?.abort())
               :disabled="cancelling"
               @click="cancelTask"
             >
-              <OctagonX :size="16" /> {{ cancelling ? "Cancelling" : "Cancel" }}
+              <OctagonX :size="16" /> {{ cancelling ? "正在取消" : "取消任务" }}
             </button>
           </header>
 
           <div class="mobile-segments">
-            <button :class="{ active: mobileTab === 'progress' }" @click="mobileTab = 'progress'">Progress</button>
-            <button :class="{ active: mobileTab === 'report' }" @click="mobileTab = 'report'">Report</button>
-            <button :class="{ active: mobileTab === 'evidence' }" @click="mobileTab = 'evidence'">Evidence</button>
+            <button :class="{ active: mobileTab === 'progress' }" @click="mobileTab = 'progress'">进度</button>
+            <button :class="{ active: mobileTab === 'report' }" @click="mobileTab = 'report'">报告</button>
+            <button :class="{ active: mobileTab === 'evidence' }" @click="mobileTab = 'evidence'">证据</button>
           </div>
 
           <div class="research-body" :class="`mobile-${mobileTab}`">
             <section class="progress-column">
               <div class="section-heading">
                 <div>
-                  <p class="eyebrow">Execution</p>
-                  <h2>Agent progress</h2>
+                  <p class="eyebrow">执行流程</p>
+                  <h2>Agent 进度</h2>
                 </div>
-                <span class="iteration-label">Round {{ selected.iteration }} / {{ selected.max_iterations }}</span>
+                <span class="iteration-label">第 {{ selected.iteration }} / {{ selected.max_iterations }} 轮</span>
               </div>
               <ResearchTimeline :events="events" :task-terminal="terminal" />
             </section>
@@ -226,8 +226,8 @@ onBeforeUnmount(() => streamController?.abort())
               <EmptyState
                 v-else
                 :icon="BookOpenText"
-                title="Report in progress"
-                :detail="terminal ? 'This task ended without a report.' : 'The writer will publish the report after evidence review.'"
+                title="报告生成中"
+                :detail="terminal ? '任务已结束，但未生成报告。' : '证据评审完成后，Writer Agent 将生成研究报告。'"
               />
             </section>
           </div>

@@ -23,34 +23,34 @@ function submit(): void {
     <div v-if="open" class="dialog-backdrop" @click.self="emit('close')">
       <form class="dialog document-dialog" @submit.prevent="submit">
         <header>
-          <div><p class="eyebrow">Knowledge base</p><h2>Add source document</h2></div>
-          <button class="icon-button subtle" type="button" title="Close" @click="emit('close')"><X :size="18" /></button>
+          <div><p class="eyebrow">知识库</p><h2>添加来源文档</h2></div>
+          <button class="icon-button subtle" type="button" title="关闭" @click="emit('close')"><X :size="18" /></button>
         </header>
         <label class="field-label">
-          Title
-          <input v-model="title" maxlength="500" placeholder="Internal market memo" required />
+          标题
+          <input v-model="title" maxlength="500" placeholder="例如：行业调研内部备忘录" required />
         </label>
         <label class="field-label">
-          Source URL <span class="optional-label">Optional</span>
+          来源链接 <span class="optional-label">选填</span>
           <input v-model="sourceUri" type="url" maxlength="2048" placeholder="https://..." />
         </label>
         <label class="field-label">
-          Document text
+          文档正文
           <textarea
             v-model="content"
             rows="12"
             minlength="20"
             maxlength="1000000"
-            placeholder="Paste the source text to index..."
+            placeholder="粘贴需要建立索引的来源文本..."
             required
           />
-          <small>{{ content.length.toLocaleString() }} characters</small>
+          <small>{{ content.length.toLocaleString("zh-CN") }} 个字符</small>
         </label>
         <p v-if="error" class="form-error">{{ error }}</p>
         <footer>
-          <button class="text-button secondary" type="button" @click="emit('close')">Cancel</button>
+          <button class="text-button secondary" type="button" @click="emit('close')">取消</button>
           <button class="text-button primary" type="submit" :disabled="loading || content.trim().length < 20">
-            {{ loading ? "Indexing..." : "Index document" }}
+            {{ loading ? "正在索引..." : "建立索引" }}
           </button>
         </footer>
       </form>

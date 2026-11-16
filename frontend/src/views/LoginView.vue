@@ -30,40 +30,40 @@ async function submit(): Promise<void> {
     <section class="auth-intro">
       <div class="auth-brand"><span class="brand-mark"><Network :size="21" /></span>EvidenceFlow</div>
       <div class="auth-intro-copy">
-        <p class="eyebrow">Deep research workbench</p>
-        <h1>Trace every conclusion back to evidence.</h1>
-        <p>Plan, search, judge, analyze, and publish from one observable multi-agent workspace.</p>
+        <p class="eyebrow">多 Agent 深度研究工作台</p>
+        <h1>让每一个结论，都能追溯到证据。</h1>
+        <p>在一个可观测的多 Agent 工作台中完成规划、检索、评审、分析与报告交付。</p>
         <ul>
-          <li><Check :size="16" /> Parallel web and local knowledge retrieval</li>
-          <li><Check :size="16" /> Citation-constrained reports</li>
-          <li><Check :size="16" /> User-scoped semantic memory</li>
+          <li><Check :size="16" /> 网络与本地知识并行检索</li>
+          <li><Check :size="16" /> 引用约束与证据溯源</li>
+          <li><Check :size="16" /> 用户隔离的语义记忆</li>
         </ul>
       </div>
-      <p class="auth-footnote">Built for rigorous, repeatable research.</p>
+      <p class="auth-footnote">为严谨、可复现的研究流程而构建。</p>
     </section>
 
     <section class="auth-form-section">
       <form class="auth-form" @submit.prevent="submit">
         <header>
-          <p class="eyebrow">{{ mode === 'login' ? 'Welcome back' : 'Create workspace' }}</p>
-          <h2>{{ mode === "login" ? "Sign in to EvidenceFlow" : "Start researching" }}</h2>
+          <p class="eyebrow">{{ mode === 'login' ? '欢迎回来' : '创建工作空间' }}</p>
+          <h2>{{ mode === "login" ? "登录 EvidenceFlow" : "开始深度研究" }}</h2>
         </header>
 
         <div class="auth-mode-tabs">
-          <button type="button" :class="{ active: mode === 'login' }" @click="mode = 'login'">Sign in</button>
-          <button type="button" :class="{ active: mode === 'register' }" @click="mode = 'register'">Register</button>
+          <button type="button" :class="{ active: mode === 'login' }" @click="mode = 'login'">登录</button>
+          <button type="button" :class="{ active: mode === 'register' }" @click="mode = 'register'">注册</button>
         </div>
 
         <label v-if="mode === 'register'" class="field-label">
-          Display name
+          显示名称
           <input v-model="displayName" autocomplete="name" minlength="1" maxlength="120" required />
         </label>
         <label class="field-label">
-          Email
+          邮箱
           <input v-model="email" type="email" autocomplete="email" required />
         </label>
         <label class="field-label">
-          Password
+          密码
           <input
             v-model="password"
             type="password"
@@ -76,7 +76,7 @@ async function submit(): Promise<void> {
 
         <p v-if="error" class="form-error">{{ error }}</p>
         <button class="auth-submit" type="submit" :disabled="auth.loading">
-          {{ auth.loading ? "Please wait" : mode === "login" ? "Sign in" : "Create account" }}
+          {{ auth.loading ? "请稍候" : mode === "login" ? "登录" : "创建账号" }}
           <ArrowRight :size="17" />
         </button>
       </form>

@@ -19,6 +19,13 @@ const sourceIcon = {
   memory: History,
 }
 
+const filterLabels = {
+  all: "全部",
+  web: "网络",
+  local: "本地",
+  memory: "记忆",
+}
+
 function percent(value: number | null): string {
   return value === null ? "--" : `${Math.round(value * 100)}%`
 }
@@ -28,13 +35,13 @@ function percent(value: number | null): string {
   <section class="evidence-panel">
     <div class="panel-heading">
       <div>
-        <p class="eyebrow">Sources</p>
-        <h2>Evidence</h2>
+        <p class="eyebrow">信息来源</p>
+        <h2>证据</h2>
       </div>
       <span class="count-badge">{{ evidence.length }}</span>
     </div>
 
-    <div class="segmented-control" aria-label="Filter evidence">
+    <div class="segmented-control" aria-label="筛选证据">
       <button
         v-for="option in ['all', 'web', 'local', 'memory'] as const"
         :key="option"
@@ -42,7 +49,7 @@ function percent(value: number | null): string {
         :class="{ active: active === option }"
         @click="active = option"
       >
-        {{ option }}
+        {{ filterLabels[option] }}
       </button>
     </div>
 
@@ -50,19 +57,19 @@ function percent(value: number | null): string {
       <article v-for="item in filtered" :key="item.domain_id" class="evidence-item">
         <header>
           <span class="source-icon"><component :is="sourceIcon[item.source_type]" :size="15" /></span>
-          <span class="citation-label">{{ item.citation_id ?? "Uncited" }}</span>
-          <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" title="Open source">
+          <span class="citation-label">{{ item.citation_id ?? "未引用" }}</span>
+          <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" title="打开来源">
             <ExternalLink :size="15" />
           </a>
         </header>
         <h3>{{ item.title }}</h3>
         <p>{{ item.content }}</p>
         <dl>
-          <div><dt>Relevance</dt><dd>{{ percent(item.relevance_score) }}</dd></div>
-          <div><dt>Credibility</dt><dd>{{ percent(item.credibility_score) }}</dd></div>
+          <div><dt>相关性</dt><dd>{{ percent(item.relevance_score) }}</dd></div>
+          <div><dt>可信度</dt><dd>{{ percent(item.credibility_score) }}</dd></div>
         </dl>
       </article>
-      <p v-if="!loading && !filtered.length" class="inline-empty">No evidence in this view.</p>
+      <p v-if="!loading && !filtered.length" class="inline-empty">当前筛选条件下暂无证据</p>
       <div v-if="loading" class="evidence-loading"><span v-for="index in 3" :key="index" /></div>
     </div>
   </section>
