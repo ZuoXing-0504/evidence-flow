@@ -71,6 +71,33 @@ async def test_bocha_provider_rejects_api_errors() -> None:
             await retriever.search("topic", ["query"])
 
 
+@pytest.mark.asyncio
+async def test_bocha_spaces_multiple_queries(monkeypatch: pytest.MonkeyPatch) -> None:
+    queries: list[str] = []
+    delays: list[float] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        queries.append(json.loads(request.content)["query"])
+        return httpx.Response(200, json={"code": 200, "data": {"webPages": {"value": []}}})
+
+    async def record_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("app.research.adapters.bocha.asyncio.sleep", record_sleep)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        retriever = BochaWebRetriever(
+            client,
+            api_key="test-key",
+            base_url="https://bocha.test/v1",
+            query_interval_seconds=0.5,
+        )
+        result = await retriever.search("topic", ["first", "second", "third"])
+
+    assert result == []
+    assert queries == ["first", "second", "third"]
+    assert delays == [0.5, 0.5]
+
+
 def _completion(content: dict[str, object]) -> httpx.Response:
     return httpx.Response(
         200,
@@ -234,3 +261,32 @@ async def test_provider_http_retries_transient_failure(monkeypatch: pytest.Monke
 
     assert result == {"ok": True}
     assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_provider_http_honors_retry_after(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    delays: list[float] = []
+
+    async def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(429, headers={"Retry-After": "1.5"})
+        return httpx.Response(200, json={"ok": True})
+
+    async def record_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("app.research.adapters.http.asyncio.sleep", record_sleep)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await post_json(
+            client,
+            "https://provider.test/resource",
+            service="Test Provider",
+            headers={},
+            payload={},
+        )
+
+    assert result == {"ok": True}
+    assert delays == [1.5]

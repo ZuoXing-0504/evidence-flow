@@ -58,6 +58,7 @@ def build_research_runtime(
             api_key=settings.bocha_api_key.get_secret_value(),
             base_url=settings.bocha_base_url,
             results_per_query=settings.bocha_results_per_query,
+            query_interval_seconds=settings.bocha_query_interval_seconds,
         )
     else:
         web_retriever = MockWebRetriever()

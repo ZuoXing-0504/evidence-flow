@@ -59,16 +59,22 @@ class BochaWebRetriever:
         api_key: str,
         base_url: str,
         results_per_query: int = 5,
+        query_interval_seconds: float = 1.0,
     ) -> None:
         self.client = client
         self.api_key = api_key
         self.url = f"{base_url.rstrip('/')}/web-search"
         self.results_per_query = results_per_query
+        self.query_interval_seconds = query_interval_seconds
 
     async def search(self, topic: str, queries: list[str]) -> list[Evidence]:
         del topic
-        batches = await asyncio.gather(*(self._search_query(query) for query in queries))
-        return [item for batch in batches for item in batch]
+        evidence: list[Evidence] = []
+        for index, query in enumerate(queries):
+            evidence.extend(await self._search_query(query))
+            if index + 1 < len(queries) and self.query_interval_seconds:
+                await asyncio.sleep(self.query_interval_seconds)
+        return evidence
 
     async def _search_query(self, query: str) -> list[Evidence]:
         raw = await post_json(

@@ -29,7 +29,14 @@ async def post_json(
             continue
 
         if (response.status_code == 429 or response.status_code >= 500) and attempt + 1 < attempts:
-            await asyncio.sleep(0.2 * (2**attempt))
+            retry_after = response.headers.get("Retry-After")
+            try:
+                delay = float(retry_after) if retry_after is not None else None
+            except ValueError:
+                delay = None
+            if delay is None:
+                delay = (1.0 if response.status_code == 429 else 0.2) * (2**attempt)
+            await asyncio.sleep(min(max(delay, 0), 30))
             continue
         if not response.is_success:
             raise ExternalProviderError(f"{service} returned HTTP {response.status_code}")

@@ -90,6 +90,10 @@ npm run dev
 docker compose --profile app up --build
 ```
 
+Docker 完整栈默认将 API 映射到 `http://localhost:8010`，Redis 映射到宿主机 `6380`，避免与常见的本地开发服务冲突；容器之间仍使用标准端口通信。
+
+博查多查询检索默认按 1 秒间隔顺序发送，并对 `HTTP 429` 遵循 `Retry-After` 或执行指数退避，避免研究规划生成多个查询时触发突发限流。
+
 ## 接入真实服务
 
 在本地 `.env` 中设置：
@@ -102,7 +106,7 @@ DASHSCOPE_API_KEY=your-key
 BOCHA_API_KEY=your-key
 ```
 
-Provider 调用具备超时、有限重试、结构化输出校验与严格证据 ID 映射。即使不配置真实服务，系统仍可通过确定性的 Mock 数据完整演示研究链路。
+Provider 调用具备超时、有限重试、结构化输出校验与严格证据 ID 映射。默认单次请求超时为 90 秒，以容纳包含多条证据的长报告生成；即使不配置真实服务，系统仍可通过确定性的 Mock 数据完整演示研究链路。
 
 ## 知识库
 
