@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, R
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import CurrentUser
 from app.core.config import get_settings
 from app.db import Database, get_database
 from app.db.models import ResearchEventRecord, ResearchTaskRecord
@@ -31,8 +32,6 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 Dispatcher = Annotated[JobDispatcher, Depends(get_job_dispatcher)]
 DatabaseDependency = Annotated[Database, Depends(get_database)]
 
-# Authentication replaces this stable development identity in the next milestone.
-DEMO_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 TERMINAL_STATUSES = {
     ResearchStatus.COMPLETED.value,
     ResearchStatus.COMPLETED_WITH_WARNINGS.value,
@@ -41,9 +40,11 @@ TERMINAL_STATUSES = {
 }
 
 
-async def _owned_task(repository: ResearchRepository, task_id: UUID) -> ResearchTaskRecord:
+async def _owned_task(
+    repository: ResearchRepository, task_id: UUID, user_id: UUID
+) -> ResearchTaskRecord:
     task = await repository.get_task(task_id)
-    if task is None or task.user_id != DEMO_USER_ID:
+    if task is None or task.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Research task not found")
     return task
 
@@ -53,11 +54,12 @@ async def create_research(
     body: CreateResearchRequest,
     session: Session,
     dispatcher: Dispatcher,
+    user: CurrentUser,
 ) -> ResearchTaskRecord:
     settings = get_settings()
     state = create_initial_state(
         body.topic,
-        user_id=DEMO_USER_ID,
+        user_id=user.id,
         max_iterations=(
             body.max_iterations
             if body.max_iterations is not None
@@ -67,7 +69,7 @@ async def create_research(
     repository = ResearchRepository(session)
     task = await repository.create_task(
         task_id=state["task_id"],
-        user_id=DEMO_USER_ID,
+        user_id=user.id,
         topic=state["topic"],
         max_iterations=state["max_iterations"],
     )
@@ -102,24 +104,25 @@ async def create_research(
 @router.get("", response_model=ResearchTaskListResponse)
 async def list_research(
     session: Session,
+    user: CurrentUser,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ResearchTaskListResponse:
-    items = await ResearchRepository(session).list_tasks(DEMO_USER_ID, limit=limit, offset=offset)
+    items = await ResearchRepository(session).list_tasks(user.id, limit=limit, offset=offset)
     return ResearchTaskListResponse(
         items=[ResearchTaskResponse.model_validate(item) for item in items]
     )
 
 
 @router.get("/{task_id}", response_model=ResearchTaskResponse)
-async def get_research(task_id: UUID, session: Session) -> ResearchTaskRecord:
-    return await _owned_task(ResearchRepository(session), task_id)
+async def get_research(task_id: UUID, session: Session, user: CurrentUser) -> ResearchTaskRecord:
+    return await _owned_task(ResearchRepository(session), task_id, user.id)
 
 
 @router.post("/{task_id}/cancel", response_model=ResearchTaskResponse)
-async def cancel_research(task_id: UUID, session: Session) -> ResearchTaskRecord:
+async def cancel_research(task_id: UUID, session: Session, user: CurrentUser) -> ResearchTaskRecord:
     repository = ResearchRepository(session)
-    task = await _owned_task(repository, task_id)
+    task = await _owned_task(repository, task_id, user.id)
     changed = await repository.request_cancellation(task)
     if not changed:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task is already terminal")
@@ -132,9 +135,9 @@ async def cancel_research(task_id: UUID, session: Session) -> ResearchTaskRecord
 
 
 @router.get("/{task_id}/report", response_model=ReportResponse)
-async def get_report(task_id: UUID, session: Session) -> object:
+async def get_report(task_id: UUID, session: Session, user: CurrentUser) -> object:
     repository = ResearchRepository(session)
-    task = await _owned_task(repository, task_id)
+    task = await _owned_task(repository, task_id, user.id)
     report = await repository.get_report(task.id)
     if report is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Report is not ready")
@@ -142,9 +145,9 @@ async def get_report(task_id: UUID, session: Session) -> object:
 
 
 @router.get("/{task_id}/evidence", response_model=list[EvidenceResponse])
-async def get_evidence(task_id: UUID, session: Session) -> list[object]:
+async def get_evidence(task_id: UUID, session: Session, user: CurrentUser) -> list[object]:
     repository = ResearchRepository(session)
-    task = await _owned_task(repository, task_id)
+    task = await _owned_task(repository, task_id, user.id)
     return list(await repository.get_evidence(task.id))
 
 
@@ -193,9 +196,10 @@ async def stream_events(
     request: Request,
     session: Session,
     database: DatabaseDependency,
+    user: CurrentUser,
     last_event_id: Annotated[str | None, Header(alias="Last-Event-ID")] = None,
 ) -> Response:
-    await _owned_task(ResearchRepository(session), task_id)
+    await _owned_task(ResearchRepository(session), task_id, user.id)
     try:
         after_id = int(last_event_id) if last_event_id else 0
         if after_id < 0:

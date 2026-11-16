@@ -12,7 +12,6 @@ from app.db.models import (
     ReportRecord,
     ResearchEventRecord,
     ResearchTaskRecord,
-    UserRecord,
 )
 from app.domain import Evidence, Finding, ResearchEvent, ResearchState, ResearchStatus
 
@@ -20,14 +19,6 @@ from app.domain import Evidence, Finding, ResearchEvent, ResearchState, Research
 class ResearchRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
-
-    async def ensure_user(self, user_id: UUID) -> UserRecord:
-        user = await self.session.get(UserRecord, user_id)
-        if user is None:
-            user = UserRecord(id=user_id)
-            self.session.add(user)
-            await self.session.flush()
-        return user
 
     async def create_task(
         self,
@@ -37,7 +28,6 @@ class ResearchRepository:
         topic: str,
         max_iterations: int,
     ) -> ResearchTaskRecord:
-        await self.ensure_user(user_id)
         task = ResearchTaskRecord(
             id=task_id,
             user_id=user_id,

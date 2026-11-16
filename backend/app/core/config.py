@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     app_secret_key: SecretStr = SecretStr("development-only-change-me-please")
     app_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    jwt_access_token_expire_minutes: int = Field(default=60, ge=5, le=1440)
+    jwt_issuer: str = "evidence-flow"
 
     database_url: str = (
         "postgresql+asyncpg://evidence_flow:evidence_flow@localhost:5432/evidence_flow"

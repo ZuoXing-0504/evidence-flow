@@ -64,32 +64,50 @@ async def _client(database: Database, dispatcher: JobDispatcher) -> AsyncIterato
         app.dependency_overrides.clear()
 
 
+async def _auth_headers(
+    client: AsyncClient, email: str = "researcher@example.com"
+) -> dict[str, str]:
+    response = await client.post(
+        "/api/auth/register",
+        json={
+            "email": email,
+            "password": "correct-horse-battery-staple",
+            "display_name": "Test Researcher",
+        },
+    )
+    assert response.status_code == 201
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
 @pytest.mark.asyncio
 async def test_research_api_runs_and_replays_events(tmp_path: Path) -> None:
     async for database in _database(tmp_path / "complete.db"):
         async for client in _client(database, InlineDispatcher(database)):
+            headers = await _auth_headers(client)
             created = await client.post(
-                "/api/research", json={"topic": "AI agent market", "max_iterations": 1}
+                "/api/research",
+                json={"topic": "AI agent market", "max_iterations": 1},
+                headers=headers,
             )
             assert created.status_code == 202
             task_id = created.json()["id"]
 
-            detail = await client.get(f"/api/research/{task_id}")
+            detail = await client.get(f"/api/research/{task_id}", headers=headers)
             assert detail.json()["status"] == ResearchStatus.COMPLETED
 
-            listing = await client.get("/api/research")
+            listing = await client.get("/api/research", headers=headers)
             assert [item["id"] for item in listing.json()["items"]] == [task_id]
 
-            evidence = await client.get(f"/api/research/{task_id}/evidence")
+            evidence = await client.get(f"/api/research/{task_id}/evidence", headers=headers)
             assert len(evidence.json()) == 3
             assert evidence.json()[0]["citation_id"] == "E1"
 
-            report = await client.get(f"/api/research/{task_id}/report")
+            report = await client.get(f"/api/research/{task_id}/report", headers=headers)
             assert report.status_code == 200
             assert "[E1]" in report.json()["content"]
             assert report.json()["citation_errors"] == []
 
-            events = await client.get(f"/api/research/{task_id}/events")
+            events = await client.get(f"/api/research/{task_id}/events", headers=headers)
             assert events.status_code == 200
             assert "event: task_created" in events.text
             assert "event: node_started" in events.text
@@ -102,7 +120,7 @@ async def test_research_api_runs_and_replays_events(tmp_path: Path) -> None:
             ]
             replay = await client.get(
                 f"/api/research/{task_id}/events",
-                headers={"Last-Event-ID": str(event_ids[-2])},
+                headers={**headers, "Last-Event-ID": str(event_ids[-2])},
             )
             assert f"id: {event_ids[-1]}" in replay.text
             assert f"id: {event_ids[-2]}\n" not in replay.text
@@ -113,19 +131,22 @@ async def test_queued_task_can_be_cancelled(tmp_path: Path) -> None:
     async for database in _database(tmp_path / "cancel.db"):
         dispatcher = RecordingDispatcher()
         async for client in _client(database, dispatcher):
-            created = await client.post("/api/research", json={"topic": "Queued research"})
+            headers = await _auth_headers(client)
+            created = await client.post(
+                "/api/research", json={"topic": "Queued research"}, headers=headers
+            )
             task_id = created.json()["id"]
             assert dispatcher.task_ids == [UUID(task_id)]
 
-            cancelled = await client.post(f"/api/research/{task_id}/cancel")
+            cancelled = await client.post(f"/api/research/{task_id}/cancel", headers=headers)
             assert cancelled.status_code == 200
             assert cancelled.json()["status"] == ResearchStatus.CANCELLED
             assert cancelled.json()["cancel_requested"] is True
 
-            second_cancel = await client.post(f"/api/research/{task_id}/cancel")
+            second_cancel = await client.post(f"/api/research/{task_id}/cancel", headers=headers)
             assert second_cancel.status_code == 409
 
-            events = await client.get(f"/api/research/{task_id}/events")
+            events = await client.get(f"/api/research/{task_id}/events", headers=headers)
             assert "event: task_cancelled" in events.text
 
 
@@ -133,14 +154,18 @@ async def test_queued_task_can_be_cancelled(tmp_path: Path) -> None:
 async def test_pending_report_and_invalid_event_cursor_are_rejected(tmp_path: Path) -> None:
     async for database in _database(tmp_path / "errors.db"):
         async for client in _client(database, RecordingDispatcher()):
-            created = await client.post("/api/research", json={"topic": "Pending research"})
+            headers = await _auth_headers(client)
+            created = await client.post(
+                "/api/research", json={"topic": "Pending research"}, headers=headers
+            )
             task_id = created.json()["id"]
 
-            report = await client.get(f"/api/research/{task_id}/report")
+            report = await client.get(f"/api/research/{task_id}/report", headers=headers)
             assert report.status_code == 409
 
             events = await client.get(
-                f"/api/research/{task_id}/events", headers={"Last-Event-ID": "invalid"}
+                f"/api/research/{task_id}/events",
+                headers={**headers, "Last-Event-ID": "invalid"},
             )
             assert events.status_code == 400
 
@@ -149,13 +174,56 @@ async def test_pending_report_and_invalid_event_cursor_are_rejected(tmp_path: Pa
 async def test_worker_unavailability_is_persisted_as_failure(tmp_path: Path) -> None:
     async for database in _database(tmp_path / "worker-failure.db"):
         async for client in _client(database, FailingDispatcher()):
-            response = await client.post("/api/research", json={"topic": "Worker failure"})
+            headers = await _auth_headers(client)
+            response = await client.post(
+                "/api/research", json={"topic": "Worker failure"}, headers=headers
+            )
             assert response.status_code == 503
 
-            listing = await client.get("/api/research")
+            listing = await client.get("/api/research", headers=headers)
             task = listing.json()["items"][0]
             assert task["status"] == ResearchStatus.FAILED
             assert task["errors"] == ["Research worker is unavailable"]
 
-            missing = await client.get(f"/api/research/{UUID(int=0)}")
+            missing = await client.get(f"/api/research/{UUID(int=0)}", headers=headers)
             assert missing.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_research_tasks_are_isolated_between_users(tmp_path: Path) -> None:
+    async for database in _database(tmp_path / "isolation.db"):
+        async for client in _client(database, RecordingDispatcher()):
+            owner = await _auth_headers(client, "owner@example.com")
+            other = await _auth_headers(client, "other@example.com")
+            created = await client.post(
+                "/api/research", json={"topic": "Private research"}, headers=owner
+            )
+            task_id = created.json()["id"]
+
+            assert (await client.get(f"/api/research/{task_id}", headers=other)).status_code == 404
+            assert (
+                await client.get(f"/api/research/{task_id}/report", headers=other)
+            ).status_code == 404
+            assert (
+                await client.get(f"/api/research/{task_id}/evidence", headers=other)
+            ).status_code == 404
+            assert (
+                await client.get(f"/api/research/{task_id}/events", headers=other)
+            ).status_code == 404
+            assert (
+                await client.post(f"/api/research/{task_id}/cancel", headers=other)
+            ).status_code == 404
+            assert (await client.get("/api/research", headers=other)).json()["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_research_requires_a_valid_access_token(tmp_path: Path) -> None:
+    async for database in _database(tmp_path / "unauthorized.db"):
+        async for client in _client(database, RecordingDispatcher()):
+            missing = await client.get("/api/research")
+            invalid = await client.get(
+                "/api/research", headers={"Authorization": "Bearer not-a-jwt"}
+            )
+            assert missing.status_code == 401
+            assert invalid.status_code == 401
+            assert missing.headers["www-authenticate"] == "Bearer"

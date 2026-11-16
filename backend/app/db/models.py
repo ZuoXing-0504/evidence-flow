@@ -35,7 +35,9 @@ class UserRecord(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     email: Mapped[str | None] = mapped_column(String(320), unique=True)
+    password_hash: Mapped[str | None] = mapped_column(String(512))
     display_name: Mapped[str] = mapped_column(String(120), default="Guest researcher")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     preferences: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
