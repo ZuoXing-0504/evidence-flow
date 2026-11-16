@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Any, NotRequired, TypedDict
@@ -122,13 +123,16 @@ class ResearchState(TypedDict):
     topic: str
     status: ResearchStatus
     plan: NotRequired[ResearchPlan]
-    search_queries: Annotated[list[str], list.__add__]
-    candidate_evidence: Annotated[list[Evidence], list.__add__]
+    search_queries: list[str]
+    query_history: Annotated[list[str], operator.add]
+    candidate_evidence: Annotated[list[Evidence], operator.add]
     accepted_evidence: list[Evidence]
     findings: list[Finding]
     missing_information: list[str]
     iteration: int
     max_iterations: int
+    should_continue: bool
     report: str
-    warnings: Annotated[list[str], list.__add__]
-    errors: Annotated[list[str], list.__add__]
+    citation_errors: list[str]
+    warnings: Annotated[list[str], operator.add]
+    errors: Annotated[list[str], operator.add]
