@@ -5,6 +5,7 @@ from typing import Any
 from app.domain import (
     Evidence,
     EvidenceDecision,
+    EvidenceSource,
     Finding,
     ResearchNode,
     ResearchState,
@@ -18,14 +19,11 @@ from app.research.contracts import (
     ResearchMemory,
     ResearchPlanner,
 )
+from app.research.evidence_quality import assess_evidence
 
 
 def _prefers_chinese(value: str) -> bool:
     return any("\u4e00" <= character <= "\u9fff" for character in value)
-
-
-def _tokenize(value: str) -> set[str]:
-    return {token.casefold() for token in value.replace("-", " ").split() if len(token) > 1}
 
 
 class ResearchNodes:
@@ -92,34 +90,61 @@ class ResearchNodes:
         return {"candidate_evidence": evidence}
 
     async def evidence_judge(self, state: ResearchState) -> dict[str, Any]:
-        topic_tokens = _tokenize(state["topic"])
         accepted: list[Evidence] = []
         seen_hashes: set[str] = set()
         seen_urls: set[str] = set()
+        seen_titles: set[str] = set()
+        domain_counts: dict[str, int] = {}
 
+        ranked: list[tuple[float, Evidence]] = []
         for candidate in state["candidate_evidence"]:
             item = candidate.model_copy(deep=True)
-            normalized_url = item.url.rstrip("/").casefold() if item.url else ""
-            if item.content_hash in seen_hashes or (normalized_url and normalized_url in seen_urls):
+            quality = assess_evidence(state["topic"], item)
+            item.relevance_score = quality.relevance
+            item.credibility_score = quality.credibility
+            item.metadata.update(
+                {
+                    "quality_rank": round(quality.rank, 4),
+                    "quality_tier": quality.tier,
+                    "source_domain": quality.domain,
+                    "normalized_url": quality.normalized_url,
+                }
+            )
+            ranked.append((quality.rank, item))
+
+        for _, item in sorted(ranked, key=lambda value: value[0], reverse=True):
+            normalized_url = str(item.metadata["normalized_url"])
+            normalized_title = " ".join(item.title.casefold().split())
+            domain = str(item.metadata["source_domain"])
+            if (
+                item.content_hash in seen_hashes
+                or normalized_title in seen_titles
+                or (normalized_url and normalized_url in seen_urls)
+            ):
                 item.decision = EvidenceDecision.DUPLICATE
                 continue
-
-            content_tokens = _tokenize(f"{item.title} {item.content}")
-            overlap = len(topic_tokens & content_tokens)
-            lexical_score = min(1.0, 0.55 + overlap * 0.1)
-            item.relevance_score = (
-                lexical_score
-                if item.relevance_score is None
-                else min(1.0, item.relevance_score * 0.7 + lexical_score * 0.3)
-            )
-            if item.credibility_score is None:
-                item.credibility_score = 0.6 if item.url else 0.7
+            if (item.relevance_score or 0) < 0.3:
+                item.decision = EvidenceDecision.REJECTED
+                item.rejection_reason = "Evidence has insufficient topic overlap"
+                continue
+            if (item.credibility_score or 0) < 0.45:
+                item.decision = EvidenceDecision.REJECTED
+                item.rejection_reason = "Source credibility is below the acceptance threshold"
+                continue
+            domain_quota_reached = domain and domain_counts.get(domain, 0) >= 3
+            if item.source_type == EvidenceSource.WEB and domain_quota_reached:
+                item.decision = EvidenceDecision.REJECTED
+                item.rejection_reason = "Source domain quota exceeded"
+                continue
             item.decision = EvidenceDecision.ACCEPTED
             item.citation_id = f"E{len(accepted) + 1}"
             accepted.append(item)
             seen_hashes.add(item.content_hash)
+            seen_titles.add(normalized_title)
             if normalized_url:
                 seen_urls.add(normalized_url)
+            if item.source_type == EvidenceSource.WEB and domain:
+                domain_counts[domain] = domain_counts.get(domain, 0) + 1
 
         return {"accepted_evidence": accepted}
 

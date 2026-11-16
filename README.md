@@ -1,14 +1,24 @@
 # EvidenceFlow
 
+[![CI](https://github.com/ZuoXing-0504/evidence-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/ZuoXing-0504/evidence-flow/actions/workflows/ci.yml)
+
 EvidenceFlow 是一个基于 **LangGraph、Milvus、FastAPI 与 Vue 3** 构建的证据驱动多 Agent 深度研究系统。
 
 用户输入研究主题后，系统会依次完成意图识别、任务规划、并行检索、证据评审、分析反思和报告写作，最终生成带来源编号、可校验、可追溯的 Markdown 研究报告。
+
+## 界面预览
+
+![EvidenceFlow 中文研究工作台](docs/images/research-workbench.png)
+
+<p align="center">
+  <img src="docs/images/research-mobile.png" width="390" alt="EvidenceFlow 移动端研究报告" />
+</p>
 
 ## 核心能力
 
 - 使用 LangGraph 编排 Memory Recall、Intent Router、Planner、Web Scout、Local Scout、Evidence Judge、Analyst、Reflect、Writer、Citation Validator 等研究节点；
 - 通过 Bocha Web Search 与 Milvus RAG 并行召回外部资料和用户私有知识；
-- 对候选证据执行相关性评分、可信度评分、去重、冲突处理与引用编号；
+- 对候选证据执行中英文相关性评分、域名信誉分层、低质来源过滤、跨查询去重、来源多样性约束与质量排序；
 - 在证据不足时自动生成补充查询，执行有次数上限的反思补搜；
 - 对报告引用进行约束和校验，阻止不存在的证据编号进入可信报告；
 - 展示 Analyst 结构化结论、置信度以及支持/反对证据映射，保留从结论到来源的推理链；
@@ -22,6 +32,21 @@ EvidenceFlow 是一个基于 **LangGraph、Milvus、FastAPI 与 Vue 3** 构建�
 - 知识库支持上传 TXT、Markdown 与 PDF，并自动提取文本、分块和建立向量索引；
 - 支持 Markdown 下载、打印/另存为 PDF、引用校验结果展示和历史任务删除；
 - Mock Provider 默认无需付费密钥，便于本地演示和自动化测试。
+
+## 信源质量策略
+
+Evidence Judge 不会把搜索结果直接交给模型。候选资料先经过以下处理，再按综合质量排序并生成引用编号：
+
+| 规则 | 处理方式 |
+| --- | --- |
+| 主题相关性 | 英文词项与中文二元词组覆盖度评分，并融合向量检索已有分数 |
+| 来源可信度 | 政府/教育/国际机构、研究机构、可信媒体、普通站点分层评分 |
+| 低质来源 | 文库聚合站与用户生成内容子域降权，低于阈值时拒绝 |
+| 去重 | 归一化 URL、标题与内容哈希三路去重，忽略追踪参数和页面锚点 |
+| 来源多样性 | 每个注册域最多保留 3 条网页证据，降低单一信源支配报告的风险 |
+| 引用排序 | 相关性与可信度加权排序，高质量证据优先获得引用编号 |
+
+一次真实服务验收中，系统召回 34 条网页候选和 3 条历史记忆候选，最终保留 25 条网页证据与 1 条记忆证据，且单一域名不超过 3 条；报告生成 7 条结构化结论、26 个有效引用，引用校验无错误。验收后又根据实际域名分布将文档转载站与 UGC 子域补入低质来源层。该结果用于链路验收，不作为固定性能基准。
 
 ## 研究流程
 
@@ -134,6 +159,7 @@ GitHub Actions 会分别验证后端、前端和 Docker Compose 配置。
 ```text
 backend/                 FastAPI 服务、领域模型、Agent 图、检索适配器与测试
 frontend/                Vue 3 中文研究工作台与 Nginx 运行配置
+docs/                    桌面端与移动端演示截图
 .github/workflows/       持续集成配置
 docker-compose.yml       PostgreSQL、Redis、Milvus 与应用编排
 ```
