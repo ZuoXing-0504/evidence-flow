@@ -4,14 +4,20 @@ from hashlib import sha256
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import CurrentUser
+from app.core.config import get_settings
 from app.db.models import DocumentRecord
 from app.db.session import get_session
 from app.knowledge import KnowledgeStore, get_knowledge_store
+from app.knowledge.extraction import (
+    DocumentExtractionError,
+    document_title_from_filename,
+    extract_document_text,
+)
 from app.knowledge.repository import DocumentRepository
 from app.knowledge.schemas import (
     CreateDocumentRequest,
@@ -39,6 +45,49 @@ async def create_document(
     session: Session,
     user: CurrentUser,
     store: Store,
+) -> DocumentRecord:
+    return await _create_and_index_document(body, session, user, store)
+
+
+@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+async def upload_document(
+    session: Session,
+    user: CurrentUser,
+    store: Store,
+    file: Annotated[UploadFile, File()],
+    title: Annotated[str | None, Form(max_length=500)] = None,
+) -> DocumentRecord:
+    max_bytes = get_settings().max_document_upload_bytes
+    content = await file.read(max_bytes + 1)
+    if len(content) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Document file is too large",
+        )
+    try:
+        extracted = extract_document_text(file.filename, content)
+    except DocumentExtractionError as exc:
+        unsupported = str(exc) == "Unsupported document type"
+        raise HTTPException(
+            status_code=(
+                status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+                if unsupported
+                else status.HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+    normalized_title = " ".join((title or "").split()) or document_title_from_filename(
+        file.filename
+    )
+    body = CreateDocumentRequest(title=normalized_title, content=extracted)
+    return await _create_and_index_document(body, session, user, store)
+
+
+async def _create_and_index_document(
+    body: CreateDocumentRequest,
+    session: AsyncSession,
+    user: CurrentUser,
+    store: KnowledgeStore,
 ) -> DocumentRecord:
     content_hash = sha256(body.content.encode()).hexdigest()
     repository = DocumentRepository(session)

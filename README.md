@@ -17,6 +17,7 @@ EvidenceFlow 是一个基于 **LangGraph、Milvus、FastAPI 与 Vue 3** 构建�
 - 使用 JWT 与 Argon2id 完成身份认证，所有任务、报告、证据和知识文档均按用户隔离；
 - 通过 FastAPI SSE 实时输出节点进度，断线后可依据事件编号继续回放；
 - 提供中文 Vue 3 研究工作台，支持响应式桌面端与移动端；
+- 知识库支持上传 TXT、Markdown 与 PDF，并自动提取文本、分块和建立向量索引；
 - 支持 Markdown 下载、打印/另存为 PDF、引用校验结果展示和历史任务删除；
 - Mock Provider 默认无需付费密钥，便于本地演示和自动化测试。
 
@@ -103,7 +104,7 @@ Provider 调用具备超时、有限重试、结构化输出校验与严格证�
 
 ## 知识库
 
-`POST /api/documents` 接收标题、正文和可选来源链接。系统会分块、生成向量并写入当前用户的 Milvus 分区，研究任务中的 Local Scout 只会召回该用户自己的内容。
+`POST /api/documents` 接收标题、正文和可选来源链接；`POST /api/documents/upload` 接收最大 10 MB 的 TXT、Markdown 或 PDF 文件。系统会提取文本、分块、生成向量并写入当前用户的 Milvus 分区，研究任务中的 Local Scout 只会召回该用户自己的内容。
 
 Docker 环境使用 Milvus 作为共享向量存储；测试和单进程开发也可使用内存向量存储。默认确定性 Embedding 不依赖外部接口，配置 `EMBEDDING_PROVIDER=dashscope` 后会改用 `text-embedding-v3`。
 

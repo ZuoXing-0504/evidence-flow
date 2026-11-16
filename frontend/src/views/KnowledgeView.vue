@@ -55,6 +55,20 @@ async function create(title: string, content: string, sourceUri: string | null):
   }
 }
 
+async function upload(file: File, title: string | null): Promise<void> {
+  creating.value = true
+  dialogError.value = ""
+  try {
+    const document = await documentsApi.upload(file, title)
+    documents.value.unshift(document)
+    dialogOpen.value = false
+  } catch (value) {
+    dialogError.value = errorMessage(value)
+  } finally {
+    creating.value = false
+  }
+}
+
 async function remove(document: DocumentRecord): Promise<void> {
   if (!window.confirm(`确认从知识库中删除“${document.title}”吗？`)) return
   deletingId.value = document.id
@@ -138,6 +152,7 @@ onMounted(() => void load())
       :error="dialogError"
       @close="dialogOpen = false"
       @submit="create"
+      @upload="upload"
     />
   </AppShell>
 </template>

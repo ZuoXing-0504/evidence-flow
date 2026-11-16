@@ -306,6 +306,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "pymilvus" },
+    { name = "pypdf" },
     { name = "python-multipart" },
     { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -336,6 +337,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.7,<3" },
     { name = "pyjwt", specifier = ">=2.10,<3" },
     { name = "pymilvus", specifier = ">=2.5,<3" },
+    { name = "pypdf", specifier = ">=5.1,<7" },
     { name = "python-multipart", specifier = ">=0.0.20,<1" },
     { name = "redis", specifier = ">=5.2,<7" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0,<3" },
@@ -1047,6 +1049,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1f/46/9930c94515ee2e926ccc845e332586b23d053913dd72cd7486bb34c1517b/pymilvus-2.6.18.tar.gz", hash = "sha256:2db3fb297551a98db5d8620d7c47f6670e45168a691c31288020cf7ef8d8db83", size = 320908, upload-time = "2026-11-06T08:23:41.477Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b1/19/fdb31fa112d984238175d195919ece736db05e3d2158dd52f2ed50952405/pymilvus-2.6.18-py3-none-any.whl", hash = "sha256:a95a628c7ed94f406b7125a716479aca695b83a2e042cc94388fb8573795a0f3", size = 357187, upload-time = "2026-11-06T08:23:40.098Z" },
+]
+
+[[package]]
+name = "pypdf"
+version = "6.21.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/e1/ec8f4d155c997c45917153a5521e60d6ee6389d68abdcbc8e44e564caffc/pypdf-6.21.4.tar.gz", hash = "sha256:c8817e3f888d47a087872ded69812c1ef30cacb871d6e053e0c00bbaf0bc2163", size = 7109255, upload-time = "2026-10-28T17:00:54.81Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/4b/77e8ad4ac42c9d93600f40541a50e9feb3a61d2bbee2d76f659346072051/pypdf-6.21.4-py3-none-any.whl", hash = "sha256:33e4fb41ca352810eb4e9838aa0d82d6888a5f8bf682f43e99cce5faa666255c", size = 410430, upload-time = "2026-10-28T17:00:53.146Z" },
 ]
 
 [[package]]

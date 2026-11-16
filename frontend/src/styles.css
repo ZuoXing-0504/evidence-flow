@@ -195,6 +195,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .form-error { margin: 12px 0 0; padding: 9px 10px; color: var(--red); background: var(--red-soft); border-radius: 5px; font-size: 12px; }
 .danger-copy { color: var(--red); }
 .confirm-copy { margin: 18px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.document-mode-tabs { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; background: var(--surface-alt); border-radius: 6px; }
+.document-mode-tabs button { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); background: transparent; border: 0; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.document-mode-tabs button.active { color: var(--ink); background: white; box-shadow: 0 1px 3px rgb(24 35 30 / 10%); }
+.file-dropzone { width: 100%; min-height: 150px; margin-top: 18px; padding: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--muted); background: var(--surface-soft); border: 1px dashed #aab9b1; border-radius: 6px; cursor: pointer; }
+.file-dropzone:hover { color: var(--forest); border-color: #72a58f; background: #f2f7f4; }
+.file-dropzone strong { max-width: 100%; color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+.file-dropzone > span:last-child { font-size: 11px; }
+.file-dropzone-icon { width: 42px; height: 42px; display: grid; place-items: center; color: var(--forest); background: var(--forest-soft); border-radius: 50%; }
 
 .auth-page { min-height: 100vh; display: grid; grid-template-columns: minmax(360px, 44%) 1fr; background: var(--surface); }
 .auth-intro { min-height: 100vh; padding: 34px clamp(32px, 5vw, 78px); display: flex; flex-direction: column; color: white; background: #18241f; }

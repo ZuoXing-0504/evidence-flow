@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     bocha_results_per_query: int = Field(default=5, ge=1, le=10)
     provider_timeout_seconds: float = Field(default=30.0, ge=5, le=120)
     max_research_iterations: int = Field(default=2, ge=0, le=5)
+    max_document_upload_bytes: int = Field(default=10_485_760, ge=1024, le=52_428_800)
 
     @field_validator("app_cors_origins")
     @classmethod

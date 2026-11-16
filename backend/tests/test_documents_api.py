@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import Database
@@ -12,6 +15,7 @@ from app.db.models import Base
 from app.db.session import get_session
 from app.knowledge import get_knowledge_store
 from app.knowledge.embeddings import DeterministicEmbedder
+from app.knowledge.extraction import DocumentExtractionError, extract_document_text
 from app.knowledge.semantic import SemanticKnowledgeStore
 from app.knowledge.vector import InMemoryVectorBackend
 from app.main import app
@@ -117,3 +121,74 @@ async def test_indexing_failure_is_persisted(tmp_path: Path) -> None:
         documents = (await client.get("/api/documents", headers=headers)).json()["items"]
         assert documents[0]["status"] == "failed"
         assert documents[0]["error"] == "Vector indexing failed"
+
+
+@pytest.mark.asyncio
+async def test_text_document_upload_is_indexed(tmp_path: Path) -> None:
+    async for client in _client(tmp_path / "document-upload.db"):
+        headers = await _register(client, "upload@example.com")
+        content = "金融机构正在评估多 Agent 工作流的审计、权限和模型风险。"
+
+        response = await client.post(
+            "/api/documents/upload",
+            files={"file": ("行业备忘录.md", content.encode(), "text/markdown")},
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+        assert response.json()["title"] == "行业备忘录"
+        assert response.json()["status"] == "indexed"
+        assert response.json()["chunk_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_document_upload_rejects_unsupported_and_invalid_text(tmp_path: Path) -> None:
+    async for client in _client(tmp_path / "document-upload-errors.db"):
+        headers = await _register(client, "upload-errors@example.com")
+
+        unsupported = await client.post(
+            "/api/documents/upload",
+            files={"file": ("notes.csv", b"a,b,c", "text/csv")},
+            headers=headers,
+        )
+        invalid_text = await client.post(
+            "/api/documents/upload",
+            files={"file": ("notes.txt", b"\xff" * 30, "text/plain")},
+            headers=headers,
+        )
+
+        assert unsupported.status_code == 415
+        assert unsupported.json()["detail"] == "Unsupported document type"
+        assert invalid_text.status_code == 422
+        assert invalid_text.json()["detail"] == "Document is not valid UTF-8 text"
+
+
+def test_document_extraction_rejects_empty_text_and_unknown_suffix() -> None:
+    with pytest.raises(DocumentExtractionError, match="no extractable text"):
+        extract_document_text("empty.md", b"short")
+    with pytest.raises(DocumentExtractionError, match="Unsupported document type"):
+        extract_document_text("data.json", b'{"content": "long enough to parse"}')
+
+
+def test_pdf_document_text_is_extracted() -> None:
+    output = BytesIO()
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=612, height=792)
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): writer._add_object(font)})}
+    )
+    stream = DecodedStreamObject()
+    stream.set_data(b"BT /F1 12 Tf 72 720 Td (Evidence grounded research report) Tj ET")
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    writer.write(output)
+
+    extracted = extract_document_text("report.pdf", output.getvalue())
+
+    assert extracted == "Evidence grounded research report"
