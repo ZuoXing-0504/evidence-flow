@@ -109,6 +109,28 @@ async def test_research_api_runs_and_replays_events(tmp_path: Path) -> None:
             evidence_ids = {item["domain_id"] for item in evidence.json()}
             assert set(findings.json()[0]["supporting_evidence_ids"]) <= evidence_ids
 
+            metrics = await client.get(f"/api/research/{task_id}/metrics", headers=headers)
+            assert metrics.status_code == 200
+            assert metrics.json()["evidence_count"] == 3
+            assert metrics.json()["finding_count"] == 3
+            assert metrics.json()["citation_count"] == 3
+            assert metrics.json()["agent_run_count"] == 11
+            assert metrics.json()["total_duration_ms"] >= 0
+            assert metrics.json()["queue_duration_ms"] >= 0
+            assert {item["node"] for item in metrics.json()["node_metrics"]} == {
+                "memory_recall",
+                "intent_router",
+                "planner",
+                "web_scout",
+                "local_scout",
+                "evidence_judge",
+                "analyst",
+                "reflect",
+                "writer",
+                "citation_validator",
+                "memory_commit",
+            }
+
             report = await client.get(f"/api/research/{task_id}/report", headers=headers)
             assert report.status_code == 200
             assert "[E1]" in report.json()["content"]
@@ -239,6 +261,9 @@ async def test_research_tasks_are_isolated_between_users(tmp_path: Path) -> None
             ).status_code == 404
             assert (
                 await client.get(f"/api/research/{task_id}/findings", headers=other)
+            ).status_code == 404
+            assert (
+                await client.get(f"/api/research/{task_id}/metrics", headers=other)
             ).status_code == 404
             assert (
                 await client.get(f"/api/research/{task_id}/events", headers=other)

@@ -134,6 +134,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .timeline-step.failed { color: var(--red); }
 .timeline-step.failed .timeline-marker { color: white; background: var(--red); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgb(56 107 134 / 12%); } }
+.metrics-panel { margin-top: 26px; padding-top: 19px; border-top: 1px solid var(--line); }
+.metrics-heading { display: flex; align-items: end; justify-content: space-between; gap: 10px; }
+.metrics-heading h3 { margin: 0; font-size: 13px; letter-spacing: 0; }
+.metrics-grid { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.metrics-grid > div { min-width: 0; padding: 9px; display: grid; grid-template-columns: 14px 1fr; gap: 4px 6px; background: var(--surface-soft); }
+.metrics-grid svg { color: var(--forest); }
+.metrics-grid span { color: var(--faint); font-size: 9px; white-space: nowrap; }
+.metrics-grid strong { grid-column: 1 / -1; font-size: 13px; overflow-wrap: anywhere; }
+.node-metrics { margin-top: 16px; display: grid; gap: 10px; }
+.node-metrics-title, .node-metric-row > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.node-metrics-title { color: var(--faint); font-size: 9px; }
+.node-metric-row { position: relative; display: grid; grid-template-columns: 1fr 18px; gap: 4px 6px; }
+.node-metric-row > div { min-width: 0; color: var(--muted); font-size: 9px; }
+.node-metric-row strong { color: var(--ink); font-size: 9px; white-space: nowrap; }
+.node-run-count { color: var(--forest); font-size: 9px; font-weight: 700; text-align: right; }
+.node-duration-track { grid-column: 1 / -1; height: 2px; background: #dfe4df; overflow: hidden; }
+.node-duration-track > span { display: block; height: 100%; background: var(--forest); }
+.metrics-empty { margin: 12px 0 0; color: var(--faint); font-size: 10px; line-height: 1.5; }
 .report-column { min-width: 0; padding: 28px clamp(24px, 4vw, 62px) 64px; background: var(--surface); }
 .result-segments { width: 230px; margin: -9px auto 22px; display: grid; grid-template-columns: 1fr 1fr; padding: 3px; background: var(--surface-alt); border-radius: 6px; }
 .result-segments button { height: 30px; color: var(--muted); background: transparent; border: 0; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }

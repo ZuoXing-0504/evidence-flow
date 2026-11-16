@@ -11,17 +11,19 @@ import EvidencePanel from "@/components/EvidencePanel.vue"
 import FindingsView from "@/components/FindingsView.vue"
 import ReportView from "@/components/ReportView.vue"
 import ResearchTimeline from "@/components/ResearchTimeline.vue"
+import ResearchMetricsPanel from "@/components/ResearchMetricsPanel.vue"
 import StatusPill from "@/components/StatusPill.vue"
 import TaskList from "@/components/TaskList.vue"
 import { formatApiDate } from "@/dates"
 import { isTerminalResearchStatus } from "@/status"
-import type { Evidence, Finding, Report, ResearchEvent, ResearchTask } from "@/types"
+import type { Evidence, Finding, Report, ResearchEvent, ResearchMetrics, ResearchTask } from "@/types"
 
 const tasks = ref<ResearchTask[]>([])
 const selected = ref<ResearchTask | null>(null)
 const report = ref<Report | null>(null)
 const evidence = ref<Evidence[]>([])
 const findings = ref<Finding[]>([])
+const metrics = ref<ResearchMetrics | null>(null)
 const events = ref<ResearchEvent[]>([])
 const loadingTasks = ref(true)
 const loadingDetail = ref(false)
@@ -84,8 +86,12 @@ async function loadCompletedAssets(task: ResearchTask): Promise<void> {
 
 async function refreshSelected(): Promise<void> {
   if (!selected.value) return
-  const task = await researchApi.get(selected.value.id)
+  const [task, nextMetrics] = await Promise.all([
+    researchApi.get(selected.value.id),
+    researchApi.metrics(selected.value.id),
+  ])
   selected.value = task
+  metrics.value = nextMetrics
   const index = tasks.value.findIndex((item) => item.id === task.id)
   if (index >= 0) tasks.value[index] = task
   await loadCompletedAssets(task)
@@ -119,11 +125,14 @@ async function selectTask(id: string): Promise<void> {
   report.value = null
   evidence.value = []
   findings.value = []
+  metrics.value = null
   events.value = []
   resultMode.value = "report"
   mobileTab.value = "progress"
   try {
-    selected.value = await researchApi.get(id)
+    const [task, nextMetrics] = await Promise.all([researchApi.get(id), researchApi.metrics(id)])
+    selected.value = task
+    metrics.value = nextMetrics
     await nextTick()
     void beginStream(selected.value)
   } catch (value) {
@@ -175,6 +184,7 @@ async function deleteTask(): Promise<void> {
     report.value = null
     evidence.value = []
     findings.value = []
+    metrics.value = null
     events.value = []
     deleteDialogOpen.value = false
     if (tasks.value[0]) await selectTask(tasks.value[0].id)
@@ -271,6 +281,7 @@ onBeforeUnmount(() => streamController?.abort())
                 <span class="iteration-label">第 {{ selected.iteration }} / {{ selected.max_iterations }} 轮</span>
               </div>
               <ResearchTimeline :events="events" :task-terminal="terminal" />
+              <ResearchMetricsPanel :metrics="metrics" />
             </section>
 
             <section class="report-column">

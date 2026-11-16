@@ -79,6 +79,24 @@ export interface Finding {
   confidence: number
 }
 
+export interface NodeMetric {
+  node: ResearchNode
+  run_count: number
+  duration_ms: number
+}
+
+export interface ResearchMetrics {
+  total_duration_ms: number | null
+  queue_duration_ms: number | null
+  iteration_count: number
+  agent_run_count: number
+  evidence_count: number
+  finding_count: number
+  citation_count: number
+  evidence_by_source: Record<"web" | "local" | "memory", number>
+  node_metrics: NodeMetric[]
+}
+
 export interface ResearchEvent {
   id: number
   task_id: string

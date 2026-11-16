@@ -17,12 +17,14 @@ from app.db.models import ResearchEventRecord, ResearchTaskRecord
 from app.db.session import get_session
 from app.domain import ResearchEvent, ResearchEventType, ResearchStatus
 from app.jobs import JobDispatcher, get_job_dispatcher
+from app.research.metrics import build_research_metrics
 from app.research.repository import ResearchRepository
 from app.research.schemas import (
     CreateResearchRequest,
     EvidenceResponse,
     FindingResponse,
     ReportResponse,
+    ResearchMetricsResponse,
     ResearchTaskListResponse,
     ResearchTaskResponse,
 )
@@ -171,6 +173,18 @@ async def get_findings(task_id: UUID, session: Session, user: CurrentUser) -> li
     repository = ResearchRepository(session)
     task = await _owned_task(repository, task_id, user.id)
     return list(await repository.get_findings(task.id))
+
+
+@router.get("/{task_id}/metrics", response_model=ResearchMetricsResponse)
+async def get_metrics(
+    task_id: UUID, session: Session, user: CurrentUser
+) -> ResearchMetricsResponse:
+    repository = ResearchRepository(session)
+    task = await _owned_task(repository, task_id, user.id)
+    events = await repository.list_events(task.id, limit=500)
+    evidence = await repository.get_evidence(task.id)
+    findings = await repository.get_findings(task.id)
+    return build_research_metrics(task, events, evidence, findings)
 
 
 def _encode_sse(record: ResearchEventRecord) -> str:

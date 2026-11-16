@@ -5,6 +5,7 @@ import type {
   Finding,
   Report,
   ResearchEvent,
+  ResearchMetrics,
   ResearchTask,
   User,
 } from "@/types"
@@ -104,6 +105,7 @@ export const researchApi = {
   report: (id: string) => request<Report>(`/api/research/${id}/report`),
   evidence: (id: string) => request<Evidence[]>(`/api/research/${id}/evidence`),
   findings: (id: string) => request<Finding[]>(`/api/research/${id}/findings`),
+  metrics: (id: string) => request<ResearchMetrics>(`/api/research/${id}/metrics`),
 }
 
 export const documentsApi = {

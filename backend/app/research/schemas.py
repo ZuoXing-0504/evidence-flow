@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domain import EvidenceDecision, EvidenceSource, ResearchStatus
+from app.domain import EvidenceDecision, EvidenceSource, ResearchNode, ResearchStatus
 
 
 class CreateResearchRequest(BaseModel):
@@ -67,3 +67,21 @@ class FindingResponse(BaseModel):
     supporting_evidence_ids: list[UUID]
     opposing_evidence_ids: list[UUID]
     confidence: float
+
+
+class NodeMetricResponse(BaseModel):
+    node: ResearchNode
+    run_count: int = Field(ge=1)
+    duration_ms: int = Field(ge=0)
+
+
+class ResearchMetricsResponse(BaseModel):
+    total_duration_ms: int | None
+    queue_duration_ms: int | None
+    iteration_count: int = Field(ge=0)
+    agent_run_count: int = Field(ge=0)
+    evidence_count: int = Field(ge=0)
+    finding_count: int = Field(ge=0)
+    citation_count: int = Field(ge=0)
+    evidence_by_source: dict[EvidenceSource, int]
+    node_metrics: list[NodeMetricResponse]
